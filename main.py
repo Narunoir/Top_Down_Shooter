@@ -29,15 +29,17 @@ def draw_player_health(surf, x, y, pct):
 def draw_boss_health(surf, x, y, pct):
     if pct < 0:
         pct = 0
-    BAR_LENGTH = 600
+    BAR_LENGTH = 800
     BAR_HEIGHT = 40
     fill = pct * BAR_LENGTH
     outline_rect = pg.Rect(x, y, BAR_LENGTH, BAR_HEIGHT)
     fill_rect = pg.Rect(int(x), int(y), int(fill), BAR_HEIGHT)
-    if pct > 0.6:
+    if pct > 0.7:
         col = GREEN
-    elif pct > 0.3:
+    elif pct > 0.4:
         col = YELLOW
+    elif pct > 0.1:
+        col = ORANGE
     else:
         col = RED
     pg.draw.rect(surf, col, fill_rect)
@@ -478,7 +480,11 @@ class Game:
             pg.draw.line(self.screen, LIGHTGREY, (x, 0), (x, HEIGHT))
         for y in range(0, HEIGHT, TILESIZE):
             pg.draw.line(self.screen, LIGHTGREY, (0, y), (WIDTH, y))
-
+    def find_boss(self):
+        for sprite in self.mobs.sprites():
+            if hasattr(sprite, 'boss_level') and sprite.is_boss:
+                return sprite
+        return None  # Return None if no boss is found
     def draw(self):
         pg.display.set_caption("{:.2f}".format(self.clock.get_fps()))
         
@@ -496,8 +502,11 @@ class Game:
         ## HUD  ##
         draw_player_health(self.screen, 10, 10, self.player.health / PLAYER_HEALTH)
         if self.fighting_boss:
-            boss_instance = self.mobs.sprites()[0]
-            draw_boss_health(self.screen, 10, 40, boss_instance.health / BOSS[self.current_level]['boss_health'])
+            try:
+                boss_instance = self.find_boss()
+                draw_boss_health(self.screen, 10, 40, boss_instance.health / BOSS[self.current_level]['boss_health'])
+            except:
+                draw_boss_health(self.screen, 10, 40, 0)
         ##Zombie counter ##
         self.draw_text('Zombies: {}'.format(len(self.mobs)),self.font_name, 30, WHITE, WIDTH / 2, 15, 'center')
         self.draw_text('Score: {}'.format(self.score),self.font_name, 30, WHITE, WIDTH / 4, 15, 'center')
@@ -511,6 +520,7 @@ class Game:
         for i in range(max_grenades):
             x = i * (grenade_width + grenade_spacing) + 1200
             y = 10  # adjust the y position to move the indicator up or down
+            
 
             if i < self.player.grenade_count:
                 self.screen.blit(self.grenade_img, (x, y))

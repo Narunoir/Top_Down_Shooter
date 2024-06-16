@@ -267,9 +267,12 @@ class Boss(pg.sprite.Sprite):
         self.acc = vec(0, 0)
         self.rect.center = self.pos
         self.rot = 0
+        self.is_boss = True
+        self.damaged = False
         self.health = BOSS[self.game.current_level]['boss_health']
         self.speed = BOSS[self.game.current_level]['boss_speed']
         self.target = game.player
+        
 
 
     def avoid_mobs(self):
@@ -278,10 +281,18 @@ class Boss(pg.sprite.Sprite):
                 dist = self.pos - mob.pos
                 if 0 < dist.length() < AVOID_RADIUS:
                     self.acc += dist.normalize()
-
+    
+    def got_hit(self):
+        self.damaged = True
+        self.damage_alpha = chain(DAMAGE_ALPHA * 2)
+    
     def update(self):
-        self.draw_health()
         player_dist = self.target.pos - self.pos
+        if self.damaged:
+            try:
+                self.image.fill((255, 0, 0, next(self.damage_alpha)), special_flags=pg.BLEND_RGBA_MULT)
+            except:
+                self.damaged = False
         if player_dist.length_squared() < ENGAGE_RADIUS**20:
             if random.random() < 0.002:
                 choice(self.game.zombie_moan_sounds).play()
@@ -305,38 +316,9 @@ class Boss(pg.sprite.Sprite):
             self.kill()
             self.game.map_img.blit(self.game.splat, self.pos - vec(32, 32))
             self.game.score += 200
-       
-    def draw_health(self):
-        health_percent = self.health / BOSS[self.game.current_level]['boss_health']
-        if health_percent > 0.6:
-            col = GREEN
-        elif health_percent > 0.3:
-            col = YELLOW
-        else:
-            col = RED
-
-        # Define the size and position of the health bar
-        bar_length = 500  # The length of the health bar
-        bar_height = 20  # The height of the health bar
-        bar_x = (self.game.screen.get_width() - bar_length) // 2  # The x position of the health bar
-        bar_y = 50  # The y position of the health bar
-
-        # Calculate the current length of the health bar
-        current_length = int(bar_length * health_percent)
-
-        # Draw the health bar background
-        background_rect = pg.Rect(bar_x, bar_y, bar_length, bar_height)
-        pg.draw.rect(self.game.screen, DARKGREY, background_rect)
-
-        # Draw the current health
-        health_rect = pg.Rect(bar_x, bar_y, current_length, bar_height)
-        pg.draw.rect(self.game.screen, col, health_rect)
-
-        # Draw the text "Boss Health"
-        font = pg.font.Font(None, 36)  # Choose the font for the text (None means the default font)
-        text = font.render("Boss Health", True, WHITE)  # Create the text
-        text_rect = text.get_rect(center=(self.game.screen.get_width() // 2, bar_y - text.get_height() // 2))  # Get the rectangle that contains the text
-        self.game.screen.blit(text, text_rect)  # Draw the text on the screen
+    
+                   
+    
 
 class Bullet(pg.sprite.Sprite):
     def __init__(self, game, pos, dir, damage):
