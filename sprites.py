@@ -201,7 +201,10 @@ class Mob(pg.sprite.Sprite):
         self.health = MOB_HEALTH
         self.speed = choice(MOB_SPEEDS)
         self.target = game.player
+        self.dot_effect = []
 
+    def apply_dot(self, dot_effect):
+        self.dot_effect.append(dot_effect)
 
     def avoid_mobs(self):
         for mob in self.game.mobs:
@@ -230,11 +233,19 @@ class Mob(pg.sprite.Sprite):
             self.hit_rect.centery = self.pos.y
             collide_with_walls(self, self.game.walls, 'y')
             self.rect.center = self.hit_rect.center
+        # Process DoT effects
+        for dot_effect in self.dot_effect[:]:  # Iterate over a copy of the list
+            damage = dot_effect.update(self.game.dt)
+            if damage:
+                self.health -= damage
+            if dot_effect.duration <= 0:
+                self.dot_effect.remove(dot_effect)  # Remove expired DoT effects
         if self.health <= 0:
             choice(self.game.zombie_hit_sounds).play()
             self.kill()
             self.game.map_img.blit(self.game.splat, self.pos - vec(32, 32))
             self.game.score += 50
+    
     def draw_health(self):
         if self.health   > 60:
             col = GREEN
@@ -272,6 +283,7 @@ class Boss(pg.sprite.Sprite):
         self.health = BOSS[self.game.current_level]['boss_health']
         self.speed = BOSS[self.game.current_level]['boss_speed']
         self.target = game.player
+        self.dot_effect = []
         
 
 
@@ -285,6 +297,9 @@ class Boss(pg.sprite.Sprite):
     def got_hit(self):
         self.damaged = True
         self.damage_alpha = chain(DAMAGE_ALPHA * 2)
+
+    def apply_dot(self, dot_effect):
+        self.dot_effect.append(dot_effect)
     
     def update(self):
         player_dist = self.target.pos - self.pos
@@ -311,12 +326,22 @@ class Boss(pg.sprite.Sprite):
             self.hit_rect.centery = self.pos.y
             collide_with_walls(self, self.game.walls, 'y')
             self.rect.center = self.hit_rect.center
+        
+        
+            # Process DoT effects
+        for dot_effect in self.dot_effect[:]:  # Iterate over a copy of the list
+            damage = dot_effect.update(self.game.dt)
+            if damage:
+                self.health -= damage
+            if dot_effect.duration <= 0:
+                self.dot_effect.remove(dot_effect)  # Remove expired DoT effects
+        
+        
         if self.health <= 0:
             choice(self.game.zombie_hit_sounds).play()
             self.kill()
             self.game.map_img.blit(self.game.splat, self.pos - vec(32, 32))
-            self.game.score += 200
-    
+            self.game.score += 200   
                    
     
 
@@ -551,3 +576,35 @@ class Name(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self, self.groups)
         self.image = pg.Surface(())
         self.rect = self.image.get_rect()
+
+
+class DotEffect:
+    def __init__(self, game, target, damage_per_tick, duration, tick_rate):
+        self._layer = BULLET_LAYER
+        self.groups = game.all_sprites, game.bullets
+        self.game = game
+        self.damage_per_tick = damage_per_tick
+        self.duration = duration
+        self.tick_rate = tick_rate
+        self.elapsed_time = 0
+        self.time_since_last_tick = 0
+        self.target = target
+
+    def apply_damage(self):
+        """Apply damage to the target."""
+        if self.target.health > 0:  # Check if the target is alive
+            self.target.health -= self.damage_per_tick  # Apply damage
+            print(f"Applied {self.damage_per_tick} damage to {self.target}. Health is now {self.target.health}.")
+            if self.target.health <= 0:  # Check if the target is dead
+                pass
+
+    def update(self, dt):
+        """Update the dot effect, applying damage at each tick."""
+        self.elapsed_time += dt
+        self.time_since_last_tick += dt
+
+        if self.elapsed_time > self.duration:
+            self.kill()  # Remove the effect after its duration
+        elif self.time_since_last_tick >= self.tick_rate:
+            self.apply_damage()  # Apply damage
+            self.time_since_last_tick = 0  # Reset tick timer
