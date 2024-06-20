@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 	
 
 	Topdown (Shooter) Pack
@@ -18,4 +19,26 @@
 	Request:  http://request.kenney.nl
 
 	Follow on Twitter for updates:
+=======
+	
+
+	Topdown (Shooter) Pack
+
+	by  Kenney Vleugels (Kenney.nl)
+
+			------------------------------
+
+	License (Creative Commons Zero, CC0)
+	http://creativecommons.org/publicdomain/zero/1.0/
+
+	You may use these assets in personal and commercial projects.
+	Credit (Kenney or www.kenney.nl) would be nice but is not mandatory.
+
+			------------------------------
+
+	Donate:   http://support.kenney.nl
+	Request:  http://request.kenney.nl
+
+	Follow on Twitter for updates:
+>>>>>>> 90ccc6d36daf1b38b6678ddc5db171c367c47e45
 	@KenneyWings

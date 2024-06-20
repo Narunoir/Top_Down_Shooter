@@ -2,12 +2,14 @@ import pygame as pg, pygame
 vec = pg.math.Vector2
 
 ## Game Options / Settings
+SCREEN = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 TITLE  = "Game Name"
-WIDTH  = 1920
-HEIGHT = 1024
+WIDTH  = SCREEN.get_width()
+HEIGHT = SCREEN.get_height()
 FPS    = 60
 DEFAULT_FONT_NAME  = 'arial'
 TITLE_FONT = 'ZOMBIE.TTF'
+
 
 # Define colors
 WHITE     = (255, 255, 255)
@@ -75,9 +77,9 @@ WEAPONS['pistol'] =  {'bullet_speed': 500,
 WEAPONS['shotgun'] = {'bullet_speed': 400,
                       'bullet_lifetime': 500,
                       'fireing_rate': 900,
-                      'kickback': 20,
+                      'kickback': 50,
                       'gun_spread': 20,
-                      'bullet_damage': 18,
+                      'bullet_damage': 20,
                       'bullet_size': 'sm',
                       'bullet_count': 12,
                       'grenade_lifetime': 1000,
@@ -88,7 +90,7 @@ WEAPONS['flamethrower'] = {'bullet_speed': 600,
                       'fireing_rate': 100,
                       'kickback': 0,
                       'gun_spread': 9,
-                      'bullet_damage': 2,
+                      'bullet_damage': 1,
                       'bullet_size': 'fl',
                       'bullet_count': 6,
                       'grenade_lifetime': 1000,

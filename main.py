@@ -52,7 +52,6 @@ class Game:
         pg.mixer.pre_init(44100, -16, 1, 2048)
         pygame.init()
         pygame.mixer.init()
-        #self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         self.screen = pg.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption(TITLE)
         pg.key.set_repeat(50, 10)
@@ -184,6 +183,7 @@ class Game:
         self.boss = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
         self.items = pygame.sprite.Group()
+        self.dot_effects = pygame.sprite.Group()
         self.draw_text
         self.fighting_boss = False
         self.player_img = self.player_img_gun
@@ -232,6 +232,9 @@ class Game:
         self.all_sprites.update()
         self.camera.update(self.player)
         self.check_rects()
+        # Update DotEffect instances
+        for dot_effect in self.dot_effects:  # Assuming self.dot_effects is the list of DotEffect instances
+            dot_effect.update()
         ## level over ##########################################################################
         z_count = len(self.mobs)
         if z_count == 0 and self.fighting_boss == True:
@@ -313,7 +316,10 @@ class Game:
                 if isinstance(bullet, Flame):
                     # Create an explosion at the mob's position
                     explosion_size = bullet.explosion_size 
-                    Explosion(self, mob.pos, explosion_size, 5)
+                    Explosion(self, mob.pos, explosion_size, 0)
+                    # Apply DoT effect to the mob
+                    dot_effect = DotEffect(self, mob, 2, 30000, 1)  # Create a DotEffect instance
+                    mob.apply_dot(dot_effect)
                     bullet.kill()
                 elif isinstance(bullet, Rocket):
                     explosion_size = bullet.explosion_size      
@@ -328,6 +334,7 @@ class Game:
     def events(self):
         # events that need to be stored like actions and movement
         for event in pygame.event.get():
+            keys = pg.key.get_pressed()   # Get the state of all keyboard buttons
             # closeing Windows
             if event.type == pygame.QUIT:
                 if self.playing:
@@ -340,8 +347,9 @@ class Game:
                     self.draw_debug = not self.draw_debug
                 if event.key == pg.K_p:
                     self.paused = not self.paused
-                if event.key == pg.K_p and pg.K_o and pg.K_i and pg.K_LSHIFT:
-                    #self.next_level()
+                if keys[pg.K_p] and [pg.K_o] and [pg.K_i] and [pg.K_LSHIFT]:
+                    self.next_level()
+                if event.key == pg.K_0:
                     # Then, you can iterate over the mapping and call each cutscene
                     self.cutscene(STORY_SCRIPT[0], self.img_folder, self.cutscene_images[0])
                 if event.key == pg.K_9:
@@ -466,6 +474,8 @@ class Game:
 
             # Draw the surface on the screen
             self.screen.blit(text_surface, (50, 50))  # Draw at position (10, 10)
+
+
     def mouse_rect(self):
         mouse_pos = pg.mouse.get_pos()
         mouse_rect = pg.Rect(mouse_pos[0], mouse_pos[1], 10, 10)
@@ -480,11 +490,13 @@ class Game:
             pg.draw.line(self.screen, LIGHTGREY, (x, 0), (x, HEIGHT))
         for y in range(0, HEIGHT, TILESIZE):
             pg.draw.line(self.screen, LIGHTGREY, (0, y), (WIDTH, y))
+    
     def find_boss(self):
         for sprite in self.mobs.sprites():
             if hasattr(sprite, 'boss_level') and sprite.is_boss:
                 return sprite
         return None  # Return None if no boss is found
+
     def draw(self):
         pg.display.set_caption("{:.2f}".format(self.clock.get_fps()))
         
@@ -532,13 +544,15 @@ class Game:
         # always last to view changes
         pygame.display.flip()
 
+
     def show_start_screen(self):
         # opens a start screen
         # opens a game over screen
         self.screen.fill(BLACK)
-        self.draw_text('ZOMBIES ATE MY BLOCKS', self.title_font, 100, RED, WIDTH / 2, HEIGHT / 2, align='center')
-        self.draw_text('Press The Enter Key to Begin',self.title_font, 75, WHITE,
-                        WIDTH / 2, HEIGHT /2 + 140, align='center')
+        self.draw_text('ZOMBIES ATE MY BLOCKS', self.title_font, 100, RED, WIDTH / 2, HEIGHT / 2 - 300, align='center')
+        self.draw_text('Press The Enter Key to Begin',self.title_font, 75, WHITE, WIDTH / 2, HEIGHT /2 - 200, align='center')
+        self.draw_text('Move with your left mouse button, or the W key',self.title_font, 75, WHITE, WIDTH / 2, HEIGHT /2 + 240, align='center')
+        self.draw_text('Switch weapons with keys 1, 2, 3, 4',self.title_font, 75, WHITE, WIDTH / 2, HEIGHT /2 + 340, align='center')
         pg.display.flip()
         self.wait_for_key()
     
@@ -589,22 +603,36 @@ class Game:
             words = STORY_SCRIPT[current_stage].split(' ')
             # Display the images one at a time               
             x_position = 200  # Start from the left of the screen
-            for word  in words:
+            y_position = HEIGHT / 2  # Start from the middle of the screen
+            for word in words:
                 # Render and blit each word separately
                 word_surface = title_font.render(word, True, WHITE)
-                word_rect = word_surface.get_rect(topleft=(x_position, HEIGHT / 2))
+                word_rect = word_surface.get_rect(topleft=(x_position, y_position))
                 self.screen.blit(word_surface, word_rect.topleft)
                 pg.display.flip()
-                self.wait_for_a_short_time(500)
+                self.wait_for_a_short_time(200)
                 x_position += (word_surface.get_width() + 100)
 
+                # Check if the word goes off the screen
+                if x_position + word_surface.get_width() > WIDTH:
+                    x_position = 200  # Reset x position to start from the left
+                    y_position += word_surface.get_height() + 20  # Move up to fit longer paragraphs
+                if y_position + word_surface.get_height() > HEIGHT:
+                    x_position = 200  # Reset x position to start from the left
+                    y_position -= word_surface.get_height() + 20  # Move up to fit longer paragraphs
+                
                 # Zoom in or out if zoom is True
                 if zoom:
                     zoom_level += zoom_speed
                     zoom_level = min(max(zoom_level, 1), max_zoom)  # Limit zoom level
-
+            # Check for escape key press to exit the cut scene
+            '''for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.paused = not self.paused
+                        return'''
             current_stage += 1
-            self.wait_for_key()
+            #self.wait_for_key()
         # Display the final message
         self.draw_text('Press The Enter Key To Continue', self.title_font, 75, WHITE, WIDTH / 2, HEIGHT / 2 + 140, align='center')
         pg.display.flip()
