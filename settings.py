@@ -202,6 +202,8 @@ BOSS[10] = {'boss_image':'scorpion.png',
             'boss_damage': 40,
             'boss_hit_rect': pg.Rect(0, 0, 50, 50)
             }
+THROW_RANGE = 200
+THROW_SPEED = 500
  ## Mob settings
 MOB_IMG       = 'zoimbie1_hold.png'
 MOB_SPEEDS    = [100, 125, 150, 175, 200]
