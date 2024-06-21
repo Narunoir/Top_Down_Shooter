@@ -1,6 +1,7 @@
 import pygame as pg, pygame
 vec = pg.math.Vector2
 
+
 ## Game Options / Settings
 SCREEN = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 TITLE  = "Game Name"
@@ -144,7 +145,7 @@ LEVEL[5] = 'floor5.tmx'
 BOSS = {}
 BOSS[1] = {'boss_image':'zoimbie1_hold.png',
             'boss_speed':100,
-            'boss_health':800,
+            'boss_health':8000,
             'boss_damage': 40,
             'boss_hit_rect': pg.Rect(0, 0, 50, 50)
             }
@@ -202,8 +203,8 @@ BOSS[10] = {'boss_image':'scorpion.png',
             'boss_damage': 40,
             'boss_hit_rect': pg.Rect(0, 0, 50, 50)
             }
-THROW_RANGE = 200
-THROW_SPEED = 500
+THROW_RANGE = 1500
+THROW_SPEED = 750
  ## Mob settings
 MOB_IMG       = 'zoimbie1_hold.png'
 MOB_SPEEDS    = [100, 125, 150, 175, 200]

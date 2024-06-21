@@ -286,7 +286,6 @@ class Boss(pg.sprite.Sprite):
         self.dot_effect = []
         
 
-
     def avoid_mobs(self):
         for mob in self.game.mobs:
             if mob != self:
@@ -300,40 +299,7 @@ class Boss(pg.sprite.Sprite):
 
     def apply_dot(self, dot_effect):
         self.dot_effect.append(dot_effect)
-
-    def spawn_zombies_based_on_health(self):
-        health_pct = self.health / BOSS[self.game.current_level]['boss_health']
-        now = pg.time.get_ticks()
-        if health_pct > 0.7:
-            if now - self.last_spawn > 10000:  # Adjust timing as needed
-                self.spawn_zombie()
-                self.last_spawn = now
-        elif health_pct > 0.4:
-            if now - self.last_spawn > 7000:  # More frequent spawning
-                self.spawn_zombie()
-                self.last_spawn = now
-        elif health_pct > 0.1:
-            if now - self.last_spawn > 5000:
-                self.spawn_zombie()
-                self.last_spawn = now
-        else:
-            if now - self.last_spawn > 3000:  # Most frequent spawning
-                self.spawn_zombie()
-                self.last_spawn = now
     
-    def throw_zombie_at_player(self):
-        player_pos = self.target.pos
-        mob_pos = self.pos
-        mob_to_player = player_pos - mob_pos
-        distance_to_player = mob_to_player.length()
-        
-        if distance_to_player < THROW_RANGE:
-            # Launch the zombie towards the player
-            mob_to_player.normalize_ip()
-            mob_velocity = mob_to_player * THROW_SPEED
-            # Create a new zombie at the current position
-            Mob(self.game, mob_pos.x, mob_pos.y, mob_velocity.x, mob_velocity.y)
-
     
     def update(self):
         player_dist = self.target.pos - self.pos
@@ -361,7 +327,6 @@ class Boss(pg.sprite.Sprite):
             collide_with_walls(self, self.game.walls, 'y')
             self.rect.center = self.hit_rect.center
         
-        self.spawn_zombies_based_on_health()
             # Process DoT effects
         for dot_effect in self.dot_effect[:]:  # Iterate over a copy of the list
             damage = dot_effect.update(self.game.dt)
@@ -375,7 +340,64 @@ class Boss(pg.sprite.Sprite):
             choice(self.game.zombie_hit_sounds).play()
             self.kill()
             self.game.map_img.blit(self.game.splat, self.pos - vec(32, 32))
-            self.game.score += 200   
+            self.game.score += 200
+
+class ZombieBoss(Boss):
+    def __init__(self, game, x, y):
+        super().__init__(game, x, y)
+        self.last_spawn = pg.time.get_ticks()  # Initialize last_spawn with the current time
+        self.last_throw = 0  # Initialize last_throw with 0 or current time
+
+
+    def spawn_zombie(self):
+        Mob(self.game, self.pos.x, self.pos.y)
+
+    def spawn_zombies_based_on_health(self):
+        health_pct = self.health / BOSS[self.game.current_level]['boss_health']
+        now = pg.time.get_ticks()
+
+        if health_pct > 0.7:
+            if now - self.last_spawn > 8000:  # Every 8 seconds
+                for _ in range(2):  # Spawn 2 zombies
+                    self.spawn_zombie()
+                self.last_spawn = now
+        elif health_pct > 0.4:
+            if now - self.last_spawn > 6000:  # Every 6 seconds
+                for _ in range(3):  # Spawn 3 zombies
+                    self.spawn_zombie()
+                self.last_spawn = now
+        elif health_pct > 0.1:
+            if now - self.last_spawn > 4000:  # Every 4 seconds
+                for _ in range(4):  # Spawn 4 zombies
+                    self.spawn_zombie()
+                self.last_spawn = now
+        else:
+            if now - self.last_spawn > 2000:  # Every 2 seconds
+                for _ in range(5):  # Spawn 5 zombies
+                    self.spawn_zombie()
+                self.last_spawn = now
+    
+    def throw_zombie_at_player(self):
+        now = pg.time.get_ticks()
+        if now - self.last_throw > 9000:  # 9 seconds = 9000 milliseconds
+            player_pos = self.target.pos
+            mob_pos = self.pos
+            mob_to_player = player_pos - mob_pos
+            distance_to_player = mob_to_player.length()
+            
+            if distance_to_player < THROW_RANGE:
+                # Launch the zombie towards the player
+                mob_to_player.normalize_ip()
+                mob_velocity = mob_to_player * THROW_SPEED
+                # Create a new zombie at the current position
+                new_mob = Mob(self.game, mob_pos.x, mob_pos.y)
+                # Set the velocity of the new zombie
+                new_mob.vel = mob_velocity
+                self.last_throw = now  # Update the last_throw time
+    def update(self):
+        super().update()
+        self.throw_zombie_at_player()
+        self.spawn_zombies_based_on_health()
                    
     
 
@@ -642,3 +664,41 @@ class DotEffect:
         elif self.time_since_last_tick >= self.tick_rate:
             self.apply_damage()  # Apply damage
             self.time_since_last_tick = 0  # Reset tick timer
+
+
+class ScorpionBoss(Boss):
+    def __init__(self, game, x, y):
+        super().__init__(game, x, y)
+
+    def update(self):
+        super().update()
+
+class RobotBoss(Boss):
+    def __init__(self, game, x, y):
+        super().__init__(game, x, y)
+
+    def update(self):
+        super().update()
+
+class AirportBot(Boss):
+    def __init__(self, game, x, y):
+        super().__init__(game, x, y)
+
+    def update(self):
+        super().update()
+
+class BusDriver(Boss):
+    def __init__(self, game, x, y):
+        super().__init__(game, x, y)
+
+    def update(self):
+        super().update()
+# Define the LEVEL_BOSS mapping with lambda functions
+LEVEL_BOSS = {
+    1: lambda game, x, y: ZombieBoss(game, x, y),
+    2: lambda game, x, y: ScorpionBoss(game, x, y),
+    3: lambda game, x, y: RobotBoss(game, x, y),
+    4: lambda game, x, y: AirportBot(game, x, y),
+    5: lambda game, x, y: BusDriver(game, x, y),
+    # Continue mapping for other levels as needed
+}        

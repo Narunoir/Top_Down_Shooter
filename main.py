@@ -355,10 +355,13 @@ class Game:
                 if event.key == pg.K_9:
                     self.fighting_boss = True
                     for tile_object in self.map.tmxdata.objects:
-                        obj_center = vec(tile_object.x + tile_object.width / 2,
-                        tile_object.y + tile_object.height / 2)
                         if tile_object.name == 'boss':
-                            Boss(self, obj_center.x, obj_center.y)
+                            obj_center = vec(tile_object.x + tile_object.width / 2,
+                                            tile_object.y + tile_object.height / 2)
+                            # Fetch and call the lambda function to instantiate the boss
+                            boss_creator = LEVEL_BOSS.get(self.current_level)
+                            if boss_creator:
+                                boss_creator(self, obj_center.x, obj_center.y)
 
 
     def draw_text(self, text, font_name, size, color, x, y, align="nw"):
