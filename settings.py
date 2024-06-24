@@ -67,7 +67,7 @@ WEAPONS = {}
 WEAPONS['pistol'] =  {'bullet_speed': 500,
                       'bullet_lifetime': 1000,
                       'fireing_rate': 250,
-                      'kickback': 5,
+                      'kickback': 0,
                       'gun_spread': 2,
                       'bullet_damage': 35,
                       'bullet_size': 'lg',
@@ -151,25 +151,25 @@ BOSS[1] = {'boss_image':'zoimbie1_hold.png',
             }
 BOSS[2] = {'boss_image':'scorpion.png',
             'boss_speed':300,
-            'boss_health':2600,
+            'boss_health':5600,
             'boss_damage': 50,
             'boss_hit_rect': pg.Rect(0, 0, 128, 128)
             }
 BOSS[3] = {'boss_image':'Robot_Boss_1.png',
             'boss_speed':100,
-            'boss_health':500,
+            'boss_health':10000,
             'boss_damage': 45,
             'boss_hit_rect': pg.Rect(0, 0, 50, 50)
             }
 BOSS[4] = {'boss_image':'Airport_Bot.png',
             'boss_speed':100,
-            'boss_health':500,
+            'boss_health':5000,
             'boss_damage': 45,
             'boss_hit_rect': pg.Rect(0, 0, 50, 50)
             }
 BOSS[5] = {'boss_image':'Bus_Driver.png',
             'boss_speed':100,
-            'boss_health':500,
+            'boss_health':5000,
             'boss_damage': 40,
             'boss_hit_rect': pg.Rect(0, 0, 50, 50)
             }

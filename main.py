@@ -112,13 +112,12 @@ class Game:
                 self.cutscene_images[key].append(loaded_image)
     
         self.boss_image = {}
-        self.boss_image[1] = pg.image.load(path.join(img_folder, BOSS[1]['boss_image'])).convert_alpha()
-        self.boss_image[1] = pg.transform.scale(self.boss_image[1], (100, 100))
-        self.boss_image[2] = pg.image.load(path.join(img_folder, BOSS[2]['boss_image'])).convert_alpha()
-        self.boss_image[2] = pg.transform.scale(self.boss_image[2], (250, 250))
-        self.boss_image[3] = pg.image.load(path.join(img_folder, BOSS[3]['boss_image'])).convert_alpha()
-        self.boss_image[4] = pg.image.load(path.join(img_folder, BOSS[4]['boss_image'])).convert_alpha()
-        self.boss_image[5] = pg.image.load(path.join(img_folder, BOSS[5]['boss_image'])).convert_alpha()
+        self.boss_image[1] = pg.transform.scale(pg.image.load(path.join(img_folder, BOSS[1]['boss_image'])).convert_alpha(), (100, 100))
+
+        self.boss_image[2] = pg.transform.scale(pg.image.load(path.join(img_folder, BOSS[2]['boss_image'])).convert_alpha(), (250, 250))
+        self.boss_image[3] = pg.transform.scale(pg.image.load(path.join(img_folder, BOSS[3]['boss_image'])).convert_alpha(), (250, 290))    
+        self.boss_image[4] = pg.transform.scale(pg.image.load(path.join(img_folder, BOSS[4]['boss_image'])).convert_alpha(), (500, 350))
+        self.boss_image[5] = pg.transform.scale(pg.image.load(path.join(img_folder, BOSS[5]['boss_image'])).convert_alpha(), (100, 100))
         self.boss_image[6] = pg.image.load(path.join(img_folder, BOSS[6]['boss_image'])).convert_alpha()
         self.boss_image[7] = pg.image.load(path.join(img_folder, BOSS[7]['boss_image'])).convert_alpha()
         self.boss_image[8] = pg.image.load(path.join(img_folder, BOSS[8]['boss_image'])).convert_alpha()
@@ -231,7 +230,7 @@ class Game:
         # Updates the whole general loop
         self.all_sprites.update()
         self.camera.update(self.player)
-        self.check_rects()
+        #self.check_rects()
         # Update DotEffect instances
         for dot_effect in self.dot_effects:  # Assuming self.dot_effects is the list of DotEffect instances
             dot_effect.update()
@@ -316,20 +315,22 @@ class Game:
                 if isinstance(bullet, Flame):
                     # Create an explosion at the mob's position
                     explosion_size = bullet.explosion_size 
-                    Explosion(self, mob.pos, explosion_size, 0)
+                    Explosion(self, mob.pos, explosion_size, .25)
                     # Apply DoT effect to the mob
                     dot_effect = DotEffect(self, mob, 2, 30000, 1)  # Create a DotEffect instance
                     mob.apply_dot(dot_effect)
                     bullet.kill()
                 elif isinstance(bullet, Rocket):
+                    mob.vel = vec(0,0)
                     explosion_size = bullet.explosion_size      
                     Explosion(self, mob.pos, explosion_size, 50)
                     bullet.kill()
                 elif isinstance(bullet, Grenade):
                     explosion_size = bullet.explosion_size                    
                 elif isinstance(bullet, Bullet):
+                    mob.vel = vec(0,0)
                     bullet.kill()
-            mob.vel = vec(0,0)
+
 
     def events(self):
         # events that need to be stored like actions and movement
@@ -355,15 +356,12 @@ class Game:
                 if event.key == pg.K_9:
                     self.fighting_boss = True
                     for tile_object in self.map.tmxdata.objects:
+                        obj_center = vec(tile_object.x + tile_object.width / 2,
+                                        tile_object.y + tile_object.height / 2)
                         if tile_object.name == 'boss':
-                            obj_center = vec(tile_object.x + tile_object.width / 2,
-                                            tile_object.y + tile_object.height / 2)
-                            # Fetch and call the lambda function to instantiate the boss
-                            boss_creator = LEVEL_BOSS.get(self.current_level)
-                            if boss_creator:
-                                boss_creator(self, obj_center.x, obj_center.y)
-
-
+                            LEVEL_BOSS[self.current_level](self, obj_center.x, obj_center.y)
+                        
+                
     def draw_text(self, text, font_name, size, color, x, y, align="nw"):
         font = pg.font.Font(font_name, size)
         text_surface = font.render(text, True, color)
@@ -542,6 +540,8 @@ class Game:
             else:
                 # Draw an empty slot (optional)
                 pg.draw.rect(self.screen, (255, 255, 255), (x, y, grenade_width, grenade_height), 1)
+        
+            
         #self.check_rects()
         #self.mouse_rect()
         # always last to view changes
@@ -641,6 +641,16 @@ class Game:
         pg.display.flip()
         self.wait_for_key()
         self.paused = not self.paused
+
+    def show_game_over_screen(self):
+        # opens a game over screen
+        self.screen.fill(BLACK)
+        self.draw_text('GAME OVER', self.title_font, 100, RED, WIDTH / 2, HEIGHT / 2, align='center')
+        self.draw_text('Score {}'.format(self.score), self.title_font, 100, WHITE, WIDTH / 3, HEIGHT / 4, align='center')
+        self.draw_text('Press The Enter Key To Start',self.title_font, 75, WHITE,
+                        WIDTH / 2, HEIGHT /2 + 140, align='center')
+        pg.display.flip()
+        self.wait_for_key()
 
 
     def end_game_screen(self):
