@@ -196,7 +196,7 @@ class Game:
             if tile_object.name == 'player':
                 self.player = Player(self, obj_center.x, obj_center.y)
             if tile_object.name == 'zombie':
-                Mob(self, obj_center.x, obj_center.y)
+                ZombieMob(self, obj_center.x, obj_center.y)
             if tile_object.name == 'wall':
                 Obstacle(self, tile_object.x, tile_object.y,
                         tile_object.width, tile_object.height)
@@ -245,8 +245,7 @@ class Game:
                 obj_center = vec(tile_object.x + tile_object.width / 2,
                                 tile_object.y + tile_object.height / 2)
                 if tile_object.name == 'boss':
-                    Boss(self, obj_center.x, obj_center.y)
-
+                    LEVEL_BOSS[self.current_level](self, obj_center.x, obj_center.y)
 
         ######  Go Fast Timer   #########
         now = pg.time.get_ticks()
@@ -315,7 +314,7 @@ class Game:
                 if isinstance(bullet, Flame):
                     # Create an explosion at the mob's position
                     explosion_size = bullet.explosion_size 
-                    Explosion(self, mob.pos, explosion_size, .25)
+                    Explosion(self, mob.pos, explosion_size, 5)
                     # Apply DoT effect to the mob
                     dot_effect = DotEffect(self, mob, 2, 30000, 1)  # Create a DotEffect instance
                     mob.apply_dot(dot_effect)

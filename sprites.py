@@ -12,8 +12,8 @@ def collide_with_walls(sprite, group, dir):
 
     hits = pg.sprite.spritecollide(sprite, group, False, collide_hit_rect)
     if hits:
-        tolerance = 2 # Adjusted tolerance value
-        print("Player collided with something!")
+        #tolerance = 2 # Adjusted tolerance value
+        #print("Player collided with something!")
         if dir == 'x':
             if hits[0].rect.centerx > sprite.hit_rect.centerx:
                 sprite.vel.x = 0
@@ -30,7 +30,6 @@ def collide_with_walls(sprite, group, dir):
                 sprite.vel.y = 0
                 sprite.pos.y = hits[0].rect.bottom + sprite.hit_rect.height / 2 +2 + 1  # Added offset
             sprite.hit_rect.centery = sprite.pos.y
-
                     
 class Player(pg.sprite.Sprite):
     def __init__(self,game,x,y):
@@ -617,7 +616,7 @@ class ZombieBoss(Boss):
 
 
     def spawn_zombie(self):
-        Mob(self.game, self.pos.x, self.pos.y)
+        ZombieMob(self.game, self.pos.x, self.pos.y)
 
     def spawn_zombies_based_on_health(self):
         health_pct = self.health / BOSS[self.game.current_level]['boss_health']
@@ -657,7 +656,7 @@ class ZombieBoss(Boss):
                 mob_to_player.normalize_ip()
                 mob_velocity = mob_to_player * THROW_SPEED
                 # Create a new zombie at the current position
-                new_mob = Mob(self.game, mob_pos.x, mob_pos.y)
+                new_mob = ZombieMob(self.game, mob_pos.x, mob_pos.y)
                 # Set the velocity of the new zombie
                 new_mob.vel = mob_velocity
                 self.last_throw = now  # Update the last_throw time
@@ -719,21 +718,56 @@ class ZombieMob(Mob):
         self.groups = game.all_sprites, game.mobs
         super().__init__(game, x, y)
         self.engaged = False  # Initialize engaged state
+        self.lunge_cooldown = 3000  # Cooldown time in milliseconds
+        self.last_lunge_time = 0  # Track the last lunge time
+        self.lunge_pause_duration = 500  # Pause for 500ms after lunging
+        self.is_lunging = False  # Indicates if currently in lunge-pause state
 
     def zombie_lunge(self):
-        player_pos = self.target.pos
-        mob_pos = self.pos
-        mob_to_player = player_pos - mob_pos
-        distance_to_player = mob_to_player.length()
-        if distance_to_player < 200:
-            mob_to_player.normalize_ip()
-            mob_velocity = mob_to_player * 500
-            self.vel = mob_velocity
+        current_time = pygame.time.get_ticks()
+        if self.is_lunging:
+            # If in lunging state, check if it's time to reset velocity
+            if current_time - self.last_lunge_time > self.lunge_pause_duration:
+                self.vel = vec(0, 0)  # Stop moving after lunge pause
+                self.is_lunging = False  # Reset lunging state
+        else:
+            # Check if cooldown has elapsed and it's time to lunge
+            if current_time - self.last_lunge_time > self.lunge_cooldown:
+                player_pos = self.target.pos
+                mob_pos = self.pos
+                mob_to_player = player_pos - mob_pos
+                distance_to_player = mob_to_player.length()
+                if distance_to_player < 200:
+                    mob_to_player.normalize_ip()
+                    mob_velocity = mob_to_player * 200
+                    self.vel = mob_velocity
+                    self.last_lunge_time = current_time
+                    self.is_lunging = True  # Enter lunging state
+        
 
     def update(self):
         super().update()
         self.zombie_lunge()
         self.pos += self.vel * self.game.dt
+        player_dist = self.target.pos - self.pos
+        if player_dist.length_squared() < ENGAGE_RADIUS**2:
+            if random.random() < 0.002:
+                choice(self.game.zombie_moan_sounds).play()
+            self.rot = player_dist.angle_to(vec(1, 0))
+            self.image = pg.transform.rotate(self.game.mob_img, self.rot)
+            self.rect = self.image.get_rect()
+            self.rect.center = self.pos
+            self.acc = vec(1, 0.01).rotate(-self.rot)
+            self.avoid_mobs()
+            self.acc.scale_to_length(self.speed)
+            self.acc += self.vel * -1
+            self.vel += self.acc * self.game.dt
+            self.pos += self.vel * self.game.dt + 0.5 *self.acc * self.game.dt ** 2
+            self.hit_rect.centerx = self.pos.x
+            collide_with_walls(self, self.game.walls, 'x')
+            self.hit_rect.centery = self.pos.y
+            collide_with_walls(self, self.game.walls, 'y')
+            self.rect.center = self.hit_rect.center
         if self.health <= 0:
             choice(self.game.zombie_hit_sounds).play()
             self.game.map_img.blit(self.game.splat, self.pos - vec(32, 32))
