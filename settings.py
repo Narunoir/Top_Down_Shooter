@@ -213,7 +213,8 @@ MOB_HEALTH    = 100
 MOB_DAMAGE    = 2
 MOB_KNOCKBACK = 20
 AVOID_RADIUS  = 50
-ENGAGE_RADIUS = 550
+ENGAGE_RADIUS = 750
+DISENGAGE_RADIUS = 9000
 
 ### Effects  ###
 MUZZLE_FLASHES = ['explosion00.png','explosion01.png','explosion02.png','explosion03.png',

@@ -241,10 +241,8 @@ class Mob(pg.sprite.Sprite):
             if dot_effect.duration <= 0:
                 self.dot_effect.remove(dot_effect)  # Remove expired DoT effects
         if self.health <= 0:
-            choice(self.game.zombie_hit_sounds).play()
             self.kill()
-            self.game.map_img.blit(self.game.splat, self.pos - vec(32, 32))
-            self.game.score += 50
+            
     
     def draw_health(self):
         if self.health   > 60:
@@ -607,7 +605,7 @@ class DotEffect:
         elif self.time_since_last_tick >= self.tick_rate:
             self.apply_damage()  # Apply damage
             random_pos = self.get_random_position_within_target()
-            Explosion(self.game, random_pos, 25, 0)
+            Explosion(self.game, random_pos, 12, 0)
             self.time_since_last_tick = 0  # Reset tick timer
 
 
@@ -713,3 +711,49 @@ LEVEL_BOSS = {
     5: lambda game, x, y: BusDriver(game, x, y),
     # Continue mapping for other levels as needed
 }        
+
+
+class ZombieMob(Mob):
+    def __init__(self, game, x, y):
+        self._layer = MOB_LAYER
+        self.groups = game.all_sprites, game.mobs
+        super().__init__(game, x, y)
+        self.engaged = False  # Initialize engaged state
+
+    def zombie_lunge(self):
+        player_pos = self.target.pos
+        mob_pos = self.pos
+        mob_to_player = player_pos - mob_pos
+        distance_to_player = mob_to_player.length()
+        if distance_to_player < 200:
+            mob_to_player.normalize_ip()
+            mob_velocity = mob_to_player * 500
+            self.vel = mob_velocity
+
+    def update(self):
+        super().update()
+        self.zombie_lunge()
+        self.pos += self.vel * self.game.dt
+        if self.health <= 0:
+            choice(self.game.zombie_hit_sounds).play()
+            self.game.map_img.blit(self.game.splat, self.pos - vec(32, 32))
+            self.kill()
+            self.game.score += 50
+
+class ScorpionMob(Mob):
+    def __init__(self, game, x, y):
+        self._layer = MOB_LAYER
+        self.groups = game.all_sprites, game.mobs, game.boss
+        super().__init__(game, x, y)
+
+    def update(self):
+        super().update()
+
+class RobotMob(Mob):
+    def __init__(self, game, x, y):
+        self._layer = MOB_LAYER
+        self.groups = game.all_sprites, game.mobs, game.boss
+        super().__init__(game, x, y)
+
+    def update(self):
+        super().update()
