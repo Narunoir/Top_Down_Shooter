@@ -66,9 +66,9 @@ WEAPONS = {}
 WEAPONS['pistol'] =  {'bullet_speed': 500,
                       'bullet_lifetime': 1000,
                       'fireing_rate': 250,
-                      'kickback': 5,
+                      'kickback': 0,
                       'gun_spread': 2,
-                      'bullet_damage': 35,
+                      'bullet_damage': 20,
                       'bullet_size': 'lg',
                       'bullet_count': 1,
                       'grenade_lifetime': 1000,
@@ -90,7 +90,7 @@ WEAPONS['flamethrower'] = {'bullet_speed': 600,
                       'fireing_rate': 100,
                       'kickback': 0,
                       'gun_spread': 9,
-                      'bullet_damage': 1,
+                      'bullet_damage': 3,
                       'bullet_size': 'fl',
                       'bullet_count': 6,
                       'grenade_lifetime': 1000,
@@ -144,31 +144,31 @@ LEVEL[5] = 'floor5.tmx'
 BOSS = {}
 BOSS[1] = {'boss_image':'zoimbie1_hold.png',
             'boss_speed':100,
-            'boss_health':800,
+            'boss_health':8000,
             'boss_damage': 40,
             'boss_hit_rect': pg.Rect(0, 0, 50, 50)
             }
 BOSS[2] = {'boss_image':'scorpion.png',
             'boss_speed':300,
-            'boss_health':2600,
+            'boss_health':5600,
             'boss_damage': 50,
             'boss_hit_rect': pg.Rect(0, 0, 128, 128)
             }
 BOSS[3] = {'boss_image':'Robot_Boss_1.png',
             'boss_speed':100,
-            'boss_health':500,
+            'boss_health':10000,
             'boss_damage': 45,
             'boss_hit_rect': pg.Rect(0, 0, 50, 50)
             }
 BOSS[4] = {'boss_image':'Airport_Bot.png',
             'boss_speed':100,
-            'boss_health':500,
+            'boss_health':5000,
             'boss_damage': 45,
             'boss_hit_rect': pg.Rect(0, 0, 50, 50)
             }
 BOSS[5] = {'boss_image':'Bus_Driver.png',
             'boss_speed':100,
-            'boss_health':500,
+            'boss_health':5000,
             'boss_damage': 40,
             'boss_hit_rect': pg.Rect(0, 0, 50, 50)
             }
@@ -202,15 +202,18 @@ BOSS[10] = {'boss_image':'scorpion.png',
             'boss_damage': 40,
             'boss_hit_rect': pg.Rect(0, 0, 50, 50)
             }
+THROW_RANGE = 1500
+THROW_SPEED = 750
  ## Mob settings
 MOB_IMG       = 'zoimbie1_hold.png'
-MOB_SPEEDS    = [100, 125, 150, 175, 200]
+MOB_SPEEDS    = [75, 80, 50, 90, 65]
 MOB_HIT_RECT  = pg.Rect(0, 0, 30, 30)
 MOB_HEALTH    = 100
 MOB_DAMAGE    = 2
 MOB_KNOCKBACK = 20
 AVOID_RADIUS  = 50
-ENGAGE_RADIUS = 550
+ENGAGE_RADIUS = 750
+DISENGAGE_RADIUS = 2000
 
 ### Effects  ###
 MUZZLE_FLASHES = ['explosion00.png','explosion01.png','explosion02.png','explosion03.png',
