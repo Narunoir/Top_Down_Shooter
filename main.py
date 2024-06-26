@@ -101,7 +101,7 @@ class Game:
         self.bullet_images['fl'] = pg.image.load(path.join(img_folder, BULLET_IMG['flamethrower'])).convert_alpha()
         self.bullet_images['grenade'] = pg.image.load(path.join(img_folder, BULLET_IMG['grenade'])).convert_alpha()
         self.grenade_img = pg.image.load(path.join(img_folder, 'grenade.png')).convert_alpha()
-
+        self.poison_ball = pg.image.load(path.join(img_folder, 'poison_ball.png')).convert_alpha() 
         self.cutscene_images = {}
         for key, images in CUTSCENE_IMAGES.items():
             self.cutscene_images[key] = []
@@ -553,8 +553,8 @@ class Game:
         self.screen.fill(BLACK)
         self.draw_text('ZOMBIES ATE MY BLOCKS', self.title_font, 100, RED, WIDTH / 2, HEIGHT / 2 - 300, align='center')
         self.draw_text('Press The Enter Key to Begin',self.title_font, 75, WHITE, WIDTH / 2, HEIGHT /2 - 200, align='center')
-        self.draw_text('Move with your left mouse button, or the W key',self.title_font, 75, WHITE, WIDTH / 2, HEIGHT /2 + 240, align='center')
-        self.draw_text('Switch weapons with keys 1, 2, 3, 4',self.title_font, 75, WHITE, WIDTH / 2, HEIGHT /2 + 340, align='center')
+        self.draw_text('Move with your left mouse button, or the W key',self.title_font, 50, WHITE, WIDTH / 2, HEIGHT /2 + 240, align='center')
+        self.draw_text('Switch weapons with keys 1, 2, 3, 4',self.title_font, 50, WHITE, WIDTH / 2, HEIGHT /2 + 340, align='center')
         pg.display.flip()
         self.wait_for_key()
     

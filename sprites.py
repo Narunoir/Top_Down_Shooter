@@ -296,6 +296,14 @@ class Boss(pg.sprite.Sprite):
 
     def apply_dot(self, dot_effect):
         self.dot_effect.append(dot_effect)
+
+    def face_player(self):
+        player_dist = self.target.pos - self.pos
+        self.rot = player_dist.angle_to(vec(1, 0))    
+        self.image = pg.transform.rotate(self.game.boss_image[self.boss_level], self.rot)
+        self.rect = self.image.get_rect()
+        self.rect.center = self.pos
+    
     
     
     def update(self):
@@ -305,24 +313,21 @@ class Boss(pg.sprite.Sprite):
                 self.image.fill((255, 0, 0, next(self.damage_alpha)), special_flags=pg.BLEND_RGBA_MULT)
             except:
                 self.damaged = False
-        if player_dist.length_squared() < ENGAGE_RADIUS**20:
+        if player_dist.length_squared() < ENGAGE_RADIUS**2:  # Adjusted exponent to 2 for a realistic radius
             if random.random() < 0.002:
                 choice(self.game.zombie_moan_sounds).play()
-            self.rot = player_dist.angle_to(vec(1, 0))
-            #self.image = pg.transform.rotate(self.game.boss_image[self.game.current_level], self.rot)
-            self.rect = self.image.get_rect()
-            self.rect.center = self.pos
+            self.face_player()  # Call the new method to face the player
             self.acc = vec(1, 0.01).rotate(-self.rot)
-            self.avoid_mobs()
             self.acc.scale_to_length(self.speed)
+            self.avoid_mobs()
             self.acc += self.vel * -1
             self.vel += self.acc * self.game.dt
-            self.pos += self.vel * self.game.dt + 0.5 *self.acc * self.game.dt ** 2
+            self.pos += self.vel * self.game.dt + 0.5 * self.acc * self.game.dt ** 2
             self.hit_rect.centerx = self.pos.x
             collide_with_walls(self, self.game.walls, 'x')
             self.hit_rect.centery = self.pos.y
             collide_with_walls(self, self.game.walls, 'y')
-            self.rect.center = self.hit_rect.center
+            self.rect.center = self.pos.xy
         
             # Process DoT effects
         for dot_effect in self.dot_effect[:]:  # Iterate over a copy of the list
@@ -480,6 +485,7 @@ class Wall(pg.sprite.Sprite):
         self.game = game
         self.image = game.wall_img
         self.rect = self.image.get_rect()
+        self.hit_rect = self.rect
         self.x = x
         self.y = y
         self.rect.x = x * TILESIZE
@@ -491,6 +497,7 @@ class Obstacle(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.rect = pg.Rect(x, y, w, h)
+        self.hit_rect = self.rect
         self.x = x
         self.y = y
         self.rect.x = x
@@ -505,6 +512,7 @@ class MuzzleFlash(pg.sprite.Sprite):
         size = randint(20, 50)
         self.image = pg.transform.scale(choice(game.gun_flashes), (size, size))
         self.rect = self.image.get_rect()
+        self.hit_rect = self.rect
         self.pos = pos
         self.rect.center = pos
         self.spawn_time = pg.time.get_ticks()
@@ -527,6 +535,7 @@ class Explosion(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = pos
         self.spawn_time = pg.time.get_ticks()
+        self.hit_rect = self.rect
 
     def update(self):
         if pg.time.get_ticks() - self.spawn_time > EXPLOSION_DURATION:
@@ -544,6 +553,7 @@ class Item(pg.sprite.Sprite):
         self.type = type
         self.pos = pos
         self.rect.center = pos
+        self.hit_rect = self.rect
         self.tween = tween.easeInOutSine
         self.step = 0
         self.dir  = 1
@@ -779,6 +789,11 @@ class ScorpionMob(Mob):
         self._layer = MOB_LAYER
         self.groups = game.all_sprites, game.mobs, game.boss
         super().__init__(game, x, y)
+        self.hit_rect.width *= 0.75
+        self.hit_rect.height *= 0.75
+    
+    def spit_poision(self):
+        pass
 
     def update(self):
         super().update()

@@ -61,7 +61,6 @@ BULLET_IMG['pistol']          = 'tile_187_2.png'
 BULLET_IMG['flamethrower']    = 'flame_bullet.png'
 BULLET_IMG['grenade']    = 'grenade_bullet.png'
 
-
 WEAPONS = {}
 WEAPONS['pistol'] =  {'bullet_speed': 500,
                       'bullet_lifetime': 1000,
@@ -118,6 +117,31 @@ WEAPONS['grenade'] =  {'bullet_speed': 750,
                       'grenade_lifetime': 1000,
                        'grenade_damage': 500}
 
+MOB_WEAPON_IMAGE = {}
+MOB_WEAPON_IMAGE['poison_ball'] = 'poison_ball.png'
+MOB_WEAPON_IMAGE['electro_shock'] = 'electro_shock.png'
+
+MOB_WEAPONS = {}
+MOB_WEAPONS['poison_ball'] = {'bullet_speed': 500,
+                        'bullet_lifetime': 1000,
+                        'fireing_rate': 250,
+                        'kickback': 0,
+                        'gun_spread': 2,
+                        'bullet_damage': 20,
+                        'bullet_size': 'lg',
+                        'bullet_count': 1,
+                        'grenade_lifetime': 1000,
+                        'grenade_damage': 0}
+MOB_WEAPONS['electro_shock'] = {'bullet_speed': 500,
+                        'bullet_lifetime': 1000,
+                        'fireing_rate': 250,
+                        'kickback': 0,
+                        'gun_spread': 2,
+                        'bullet_damage': 20,
+                        'bullet_size': 'lg',
+                        'bullet_count': 1,
+                        'grenade_lifetime': 1000,
+                        'grenade_damage': 0}
 
 ####Not Needed Anymore  ###
 #BULLET_SPEED    = 700
@@ -152,7 +176,7 @@ BOSS[2] = {'boss_image':'scorpion.png',
             'boss_speed':300,
             'boss_health':5600,
             'boss_damage': 50,
-            'boss_hit_rect': pg.Rect(0, 0, 128, 128)
+            'boss_hit_rect': pg.Rect(0, 0, 130, 150)
             }
 BOSS[3] = {'boss_image':'Robot_Boss_1.png',
             'boss_speed':100,
