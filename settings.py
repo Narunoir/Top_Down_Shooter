@@ -68,7 +68,7 @@ WEAPONS['pistol'] =  {'bullet_speed': 500,
                       'kickback': 0,
                       'gun_spread': 2,
                       'bullet_damage': 20,
-                      'bullet_size': 'lg',
+                      'bullet_image': 'lg_bullet',
                       'bullet_count': 1,
                       'grenade_lifetime': 1000,
                       'grenade_damage': 0}
@@ -79,7 +79,7 @@ WEAPONS['shotgun'] = {'bullet_speed': 400,
                       'kickback': 50,
                       'gun_spread': 20,
                       'bullet_damage': 20,
-                      'bullet_size': 'sm',
+                      'bullet_image': 'sm_bullet',
                       'bullet_count': 12,
                       'grenade_lifetime': 1000,
                       'grenade_damage': 0}
@@ -90,7 +90,7 @@ WEAPONS['flamethrower'] = {'bullet_speed': 600,
                       'kickback': 0,
                       'gun_spread': 9,
                       'bullet_damage': 3,
-                      'bullet_size': 'fl',
+                      'bullet_image': 'flame_bullet',
                       'bullet_count': 6,
                       'grenade_lifetime': 1000,
                         'grenade_damage': 0}
@@ -101,7 +101,7 @@ WEAPONS['bazooka'] =  {'bullet_speed': 950,
                       'kickback': 10,
                       'gun_spread': .25,
                       'bullet_damage': 800,
-                      'bullet_size': 'grenade',
+                      'bullet_image': 'grenade',
                       'bullet_count': 1,
                        'grenade_lifetime': 1000,
                        'grenade_damage': 0}
@@ -112,10 +112,25 @@ WEAPONS['grenade'] =  {'bullet_speed': 750,
                       'kickback': 0,
                       'gun_spread': 0,
                       'bullet_damage': 0,
-                      'bullet_size': 'grenade',
+                      'bullet_image': 'grenade',
                       'bullet_count': 1,
                       'grenade_lifetime': 1000,
                        'grenade_damage': 500}
+
+ ## Mob settings
+MOB_IMG       = 'zoimbie1_hold.png'
+SCORPION_MOB_IMG = 'scorpion_king.png'
+
+MOB_SPEEDS    = [75, 80, 50, 90, 65]
+MOB_HIT_RECT  = pg.Rect(0, 0, 30, 30)
+MOB_HEALTH    = 100
+MOB_DAMAGE    = 2
+MOB_KNOCKBACK = 20
+AVOID_RADIUS  = 50
+ENGAGE_RADIUS = 750
+DISENGAGE_RADIUS = 2000
+
+
 
 MOB_WEAPON_IMAGE = {}
 MOB_WEAPON_IMAGE['poison_ball'] = 'poison_ball.png'
@@ -128,7 +143,7 @@ MOB_WEAPONS['poison_ball'] = {'bullet_speed': 500,
                         'kickback': 0,
                         'gun_spread': 2,
                         'bullet_damage': 20,
-                        'bullet_size': 'lg',
+                        'bullet_image': 'poison_ball',
                         'bullet_count': 1,
                         'grenade_lifetime': 1000,
                         'grenade_damage': 0}
@@ -138,7 +153,7 @@ MOB_WEAPONS['electro_shock'] = {'bullet_speed': 500,
                         'kickback': 0,
                         'gun_spread': 2,
                         'bullet_damage': 20,
-                        'bullet_size': 'lg',
+                        'bullet_image': 'electro_bolt',
                         'bullet_count': 1,
                         'grenade_lifetime': 1000,
                         'grenade_damage': 0}
@@ -228,16 +243,7 @@ BOSS[10] = {'boss_image':'scorpion.png',
             }
 THROW_RANGE = 1500
 THROW_SPEED = 750
- ## Mob settings
-MOB_IMG       = 'zoimbie1_hold.png'
-MOB_SPEEDS    = [75, 80, 50, 90, 65]
-MOB_HIT_RECT  = pg.Rect(0, 0, 30, 30)
-MOB_HEALTH    = 100
-MOB_DAMAGE    = 2
-MOB_KNOCKBACK = 20
-AVOID_RADIUS  = 50
-ENGAGE_RADIUS = 750
-DISENGAGE_RADIUS = 2000
+
 
 ### Effects  ###
 MUZZLE_FLASHES = ['explosion00.png','explosion01.png','explosion02.png','explosion03.png',

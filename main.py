@@ -91,17 +91,28 @@ class Game:
         self.player_img_flamethrower = pg.image.load(path.join(img_folder, PLAYER_IMG['flamethrower'])).convert_alpha()
         self.player_img_bazooka = pg.image.load(path.join(img_folder, PLAYER_IMG['bazooka'])).convert_alpha()
         
-        self.mob_img = pg.image.load(path.join(mob_folder, MOB_IMG)).convert_alpha()
+        
+        self.mob_img = {}
+        self.mob_img['zombie_mob'] = pg.image.load(path.join(mob_folder, MOB_IMG)).convert_alpha()
+        self.mob_img['scorpion_mob'] = pg.image.load(path.join(mob_folder, SCORPION_MOB_IMG)).convert_alpha()
         self.wall_img = pg.image.load(path.join(wall_folder, WALL_IMG)).convert_alpha()
         self.wall_img = pg.transform.scale(self.wall_img, (TILESIZE, TILESIZE))
 
         self.bullet_images = {}
-        self.bullet_images['lg'] = pg.image.load(path.join(img_folder, BULLET_IMG['pistol'])).convert_alpha()
-        self.bullet_images['sm'] = pg.transform.scale(self.bullet_images['lg'], (10, 10))
-        self.bullet_images['fl'] = pg.image.load(path.join(img_folder, BULLET_IMG['flamethrower'])).convert_alpha()
+        self.bullet_images['lg_bullet'] = pg.image.load(path.join(img_folder, BULLET_IMG['pistol'])).convert_alpha()
+        self.bullet_images['sm_bullet'] = pg.transform.scale(self.bullet_images['lg_bullet'], (10, 10))
+        self.bullet_images['flame_bullet'] = pg.image.load(path.join(img_folder, BULLET_IMG['flamethrower'])).convert_alpha()
         self.bullet_images['grenade'] = pg.image.load(path.join(img_folder, BULLET_IMG['grenade'])).convert_alpha()
         self.grenade_img = pg.image.load(path.join(img_folder, 'grenade.png')).convert_alpha()
-        self.poison_ball = pg.image.load(path.join(img_folder, 'poison_ball.png')).convert_alpha() 
+         
+        
+        self.mob_weapon_images = {}
+        self.mob_weapon_images['poison_ball'] = pg.image.load(path.join(img_folder, MOB_WEAPON_IMAGE['poison_ball'])).convert_alpha()
+        self.mob_weapon_images['electro_shock'] = pg.image.load(path.join(img_folder, MOB_WEAPON_IMAGE['electro_shock'])).convert_alpha()
+        
+        
+        
+        
         self.cutscene_images = {}
         for key, images in CUTSCENE_IMAGES.items():
             self.cutscene_images[key] = []
@@ -202,6 +213,8 @@ class Game:
                         tile_object.width, tile_object.height)
             if tile_object.name in ['health_pack', 'shotgun', 'flamethrower', 'bazooka', 'grenade']:
                 Item(self, obj_center, tile_object.name)
+            if tile_object.name == 'scorpion':
+                ScorpionMob(self, obj_center.x, obj_center.y)
 
         self.camera = Camera(self.map.width, self.map.height)
         self.draw_debug = False

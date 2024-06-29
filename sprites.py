@@ -182,13 +182,14 @@ class Player(pg.sprite.Sprite):
 
 
 class Mob(pg.sprite.Sprite):
-    def __init__(self, game, x, y):
+    def __init__(self, game, x, y, mob_type):
         self._layer = MOB_LAYER
         self.groups = game.all_sprites, game.mobs
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
-        self.image = game.mob_img.copy()
+        self.image = game.mob_img[mob_type].copy()
         self.rect = self.image.get_rect()
+        self.mob_type = mob_type
         self.rect.center = (x, y)
         self.hit_rect = MOB_HIT_RECT.copy()
         self.hit_rect.center = self.rect.center
@@ -218,7 +219,7 @@ class Mob(pg.sprite.Sprite):
             if random.random() < 0.002:
                 choice(self.game.zombie_moan_sounds).play()
             self.rot = player_dist.angle_to(vec(1, 0))
-            self.image = pg.transform.rotate(self.game.mob_img, self.rot)
+            self.image = pg.transform.rotate(self.game.mob_img[self.mob_type], self.rot)
             self.rect = self.image.get_rect()
             self.rect.center = self.pos
             self.acc = vec(1, 0.01).rotate(-self.rot)
@@ -354,7 +355,7 @@ class Bullet(pg.sprite.Sprite):
         self.groups = game.all_sprites, game.bullets
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
-        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_size']]
+        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_image']]
         self.rect = self.image.get_rect()
         self.hit_rect = self.rect
         self.pos = vec(pos)
@@ -381,7 +382,7 @@ class Rocket(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.explosion_size = explosion_size
-        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_size']]
+        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_image']]
         self.rect = self.image.get_rect()
         self.hit_rect = self.rect
         self.pos = vec(pos)
@@ -410,7 +411,7 @@ class Flame(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.explosion_size = explosion_size
-        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_size']]
+        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_image']]
         self.rect = self.image.get_rect()
         self.hit_rect = self.rect
         self.pos = vec(pos)
@@ -439,7 +440,7 @@ class Grenade(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.explosion_size = explosion_size
-        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_size']]
+        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_image']]
         self.rect = self.image.get_rect()
         self.hit_rect = self.rect
         self.pos = vec(pos)
@@ -726,7 +727,7 @@ class ZombieMob(Mob):
     def __init__(self, game, x, y):
         self._layer = MOB_LAYER
         self.groups = game.all_sprites, game.mobs
-        super().__init__(game, x, y)
+        super().__init__(game, x, y, 'zombie_mob')
         self.engaged = False  # Initialize engaged state
         self.lunge_cooldown = 3000  # Cooldown time in milliseconds
         self.last_lunge_time = 0  # Track the last lunge time
@@ -764,7 +765,7 @@ class ZombieMob(Mob):
             if random.random() < 0.002:
                 choice(self.game.zombie_moan_sounds).play()
             self.rot = player_dist.angle_to(vec(1, 0))
-            self.image = pg.transform.rotate(self.game.mob_img, self.rot)
+            self.image = pg.transform.rotate(self.game.mob_img['zombie_mob'], self.rot)
             self.rect = self.image.get_rect()
             self.rect.center = self.pos
             self.acc = vec(1, 0.01).rotate(-self.rot)
@@ -788,15 +789,47 @@ class ScorpionMob(Mob):
     def __init__(self, game, x, y):
         self._layer = MOB_LAYER
         self.groups = game.all_sprites, game.mobs, game.boss
-        super().__init__(game, x, y)
+        super().__init__(game, x, y, 'scorpion_mob')
         self.hit_rect.width *= 0.75
         self.hit_rect.height *= 0.75
+        self.last_shot = 0
     
     def spit_poision(self):
-        pass
+        now = pg.time.get_ticks()
+        if now - self.last_shot > 2000:
+            self.last_shot = now
+            dir = vec(1, 0).rotate(-self.rot)
+            pos = self.pos + BARREL_OFFSET.rotate(-self.rot)
+            PoisonBall(self.game, pos, dir, 10)
+            #choice(self.game.weapon_sounds['spit']).play()        
 
     def update(self):
+        #self.spit_poision()
         super().update()
+        
+
+class PoisonBall(pg.sprite.Sprite):
+    def __init__(self, game, pos, dir, damage):
+        self._layer = BULLET_LAYER
+        self.groups = game.all_sprites, game.bullets
+        pg.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        self.image = game.mob_weapon_images['poison_ball']
+        self.rect = self.image.get_rect()
+        self.hit_rect = self.rect
+        self.pos = vec(pos)
+        self.rect.center = pos
+        self.vel = dir * 500
+        self.spawn_time = pg.time.get_ticks()
+        self.damage = damage
+
+    def update(self):
+        self.pos += self.vel * self.game.dt
+        self.rect.center = self.pos
+        if pg.sprite.spritecollideany(self,self.game.walls):
+            self.kill()
+        if pg.time.get_ticks() - self.spawn_time > MOB_WEAPONS['electro_shock']['bullet_lifetime']:
+            self.kill()
 
 class RobotMob(Mob):
     def __init__(self, game, x, y):
@@ -806,3 +839,26 @@ class RobotMob(Mob):
 
     def update(self):
         super().update()
+
+class ElectroShock(pg.sprite.Sprite):
+    def __init__(self, game, pos, dir, damage):
+        self._layer = BULLET_LAYER
+        self.groups = game.all_sprites, game.bullets
+        pg.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        self.image = game.mob_weapon_images['electro_shock']
+        self.rect = self.image.get_rect()
+        self.hit_rect = self.rect
+        self.pos = vec(pos)
+        self.rect.center = pos
+        self.vel = dir * 500
+        self.spawn_time = pg.time.get_ticks()
+        self.damage = damage
+
+    def update(self):
+        self.pos += self.vel * self.game.dt
+        self.rect.center = self.pos
+        if pg.sprite.spritecollideany(self,self.game.walls):
+            self.kill()
+        if pg.time.get_ticks() - self.spawn_time > MOB_WEAPONS['electro_shock']['bullet_lifetime']:
+            self.kill()
