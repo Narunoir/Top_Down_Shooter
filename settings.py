@@ -119,7 +119,7 @@ WEAPONS['grenade'] =  {'bullet_speed': 750,
 
  ## Mob settings
 MOB_IMG       = 'zoimbie1_hold.png'
-SCORPION_MOB_IMG = 'scorpion_king.png'
+SCORPION_MOB_IMG = '2d_scorpion.png'
 
 MOB_SPEEDS    = [75, 80, 50, 90, 65]
 MOB_HIT_RECT  = pg.Rect(0, 0, 30, 30)
@@ -129,6 +129,10 @@ MOB_KNOCKBACK = 20
 AVOID_RADIUS  = 50
 ENGAGE_RADIUS = 750
 DISENGAGE_RADIUS = 2000
+
+### Mob Weapons  ###
+POISON_BALL_SPEED = 500
+POISON_PUDDLE = 'poison_puddle.png'
 
 
 

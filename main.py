@@ -94,7 +94,7 @@ class Game:
         
         self.mob_img = {}
         self.mob_img['zombie_mob'] = pg.image.load(path.join(mob_folder, MOB_IMG)).convert_alpha()
-        self.mob_img['scorpion_mob'] = pg.image.load(path.join(mob_folder, SCORPION_MOB_IMG)).convert_alpha()
+        self.mob_img['scorpion_mob'] = pg.transform.flip(pg.transform.scale(pg.image.load(path.join(mob_folder, SCORPION_MOB_IMG)).convert_alpha(), (80, 80)), True, False)
         self.wall_img = pg.image.load(path.join(wall_folder, WALL_IMG)).convert_alpha()
         self.wall_img = pg.transform.scale(self.wall_img, (TILESIZE, TILESIZE))
 
@@ -138,6 +138,7 @@ class Game:
 
 
         self.splat = pg.image.load(path.join(img_folder, SPLAT)).convert_alpha()
+        self.poison_puddle = pg.image.load(path.join(img_folder, POISON_PUDDLE)).convert_alpha()
         self.gun_flashes = []
         for img in MUZZLE_FLASHES:
             self.gun_flashes.append(pg.image.load(path.join(img_folder, img)).convert_alpha())
@@ -327,9 +328,9 @@ class Game:
                 if isinstance(bullet, Flame):
                     # Create an explosion at the mob's position
                     explosion_size = bullet.explosion_size 
-                    Explosion(self, mob.pos, explosion_size, 5)
+                    Explosion(self, mob.pos, explosion_size, .25)
                     # Apply DoT effect to the mob
-                    dot_effect = DotEffect(self, mob, 2, 30000, 1)  # Create a DotEffect instance
+                    dot_effect = DotEffect(self, mob, 1.25, 30000, .5)  # Create a DotEffect instance
                     mob.apply_dot(dot_effect)
                     bullet.kill()
                 elif isinstance(bullet, Rocket):
