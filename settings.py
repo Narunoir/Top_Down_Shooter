@@ -133,12 +133,14 @@ DISENGAGE_RADIUS = 2000
 ### Mob Weapons  ###
 POISON_BALL_SPEED = 500
 POISON_PUDDLE = 'poison_puddle.png'
+POISON_DAMAGE = 3
 
 
 
 MOB_WEAPON_IMAGE = {}
 MOB_WEAPON_IMAGE['poison_ball'] = 'poison_ball.png'
 MOB_WEAPON_IMAGE['electro_shock'] = 'electro_shock.png'
+MOB_WEAPON_IMAGE['poison_puddle'] = 'poison_puddle.png'
 
 MOB_WEAPONS = {}
 MOB_WEAPONS['poison_ball'] = {'bullet_speed': 500,

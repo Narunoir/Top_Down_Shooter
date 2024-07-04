@@ -108,6 +108,7 @@ class Game:
         
         self.mob_weapon_images = {}
         self.mob_weapon_images['poison_ball'] = pg.image.load(path.join(img_folder, MOB_WEAPON_IMAGE['poison_ball'])).convert_alpha()
+        self.mob_weapon_images['poison_puddle'] = pg.image.load(path.join(img_folder, MOB_WEAPON_IMAGE['poison_puddle'])).convert_alpha()
         self.mob_weapon_images['electro_shock'] = pg.image.load(path.join(img_folder, MOB_WEAPON_IMAGE['electro_shock'])).convert_alpha()
         
         
@@ -193,6 +194,7 @@ class Game:
         self.mobs = pygame.sprite.Group()
         self.boss = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
+        self.mob_bullets = pygame.sprite.Group()
         self.items = pygame.sprite.Group()
         self.dot_effects = pygame.sprite.Group()
         self.draw_text
@@ -315,6 +317,7 @@ class Game:
         if hits:
             self.player.got_hit()
             self.player.pos += vec(MOB_KNOCKBACK, 0).rotate(-hits[0].rot)
+        
         ##### Boss hits player  ####
         hits = pg.sprite.spritecollide(self.player, self.boss, False, collide_hit_rect)
         for hit in hits:
@@ -343,6 +346,15 @@ class Game:
                 elif isinstance(bullet, Bullet):
                     mob.vel = vec(0,0)
                     bullet.kill()
+        ### Mob_Bullet hits Player ###
+        m_hits = pg.sprite.spritecollide(self.player, self.mob_bullets, False, collide_hit_rect)
+        for m_hit in m_hits:
+            if isinstance(m_hit, PoisonBall):
+                dot_effect = DotEffect(self, self.player, 1.25, 10000, .5)  # Create a DotEffect instance
+                self.player.apply_dot(dot_effect)
+                m_hit.kill()
+            #if isinstance(m_hit, PoisonPuddle):
+                #self.player.health -= POISON_DAMAGE
 
 
     def events(self):

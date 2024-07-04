@@ -586,7 +586,7 @@ class Name(pg.sprite.Sprite):
 class DotEffect:
     def __init__(self, game, target, damage_per_tick, duration, tick_rate):
         self._layer = BULLET_LAYER
-        self.groups = game.all_sprites, game.bullets
+        self.groups = game.all_sprites, game.bullets, game.mob_bullets
         self.game = game
         self.damage_per_tick = damage_per_tick
         self.duration = duration
@@ -687,9 +687,30 @@ class ScorpionBoss(Boss):
         self._layer = MOB_LAYER
         self.groups = game.all_sprites, game.mobs, game.boss
         super().__init__(game, x, y)
+        self.last_shot = 0
+
+    def spit_poison(self):
+        now = pg.time.get_ticks()
+        if now - self.last_shot > 3000:  
+            player_pos = self.target.pos
+            mob_pos = self.pos
+            mob_to_player = player_pos - mob_pos
+            distance_to_player = mob_to_player.length()
+            #dir = vec(1, 0).rotate(-self.rot)
+            
+            if distance_to_player < THROW_RANGE:
+                # Launch the poison ball towards the player
+                mob_to_player.normalize_ip()
+                mob_velocity = mob_to_player * THROW_SPEED
+                # Create a new poison ball at the current position
+                new_poison_ball = PoisonBall(self.game, mob_pos, 0)
+                # Set the velocity of the new poison ball
+                new_poison_ball.vel = mob_velocity
+                self.last_shot = now  # Update the last_shot time
 
     def update(self):
         super().update()
+        self.spit_poison()
 
 class RobotBoss(Boss):
     def __init__(self, game, x, y):
@@ -814,7 +835,7 @@ class ScorpionMob(Mob):
                 mob_to_player.normalize_ip()
                 mob_velocity = mob_to_player * THROW_SPEED
                 # Create a new poison ball at the current position
-                new_poison_ball = PoisonBall(self.game, mob_pos, 0)
+                new_poison_ball = PoisonBall(self.game, mob_pos, 8)
                 # Set the velocity of the new poison ball
                 new_poison_ball.vel = mob_velocity
                 self.last_shot = now  # Update the last_shot time
@@ -852,7 +873,7 @@ class ScorpionMob(Mob):
 class PoisonBall(pg.sprite.Sprite):
     def __init__(self, game, pos, damage):
         self._layer = BULLET_LAYER
-        self.groups = game.all_sprites, game.bullets
+        self.groups = game.all_sprites, game.mob_bullets
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.image = game.mob_weapon_images['poison_ball']
@@ -861,6 +882,7 @@ class PoisonBall(pg.sprite.Sprite):
         self.pos = vec(pos)
         self.rect.center = pos
         self.damage = damage
+        self.wall = game.walls
         self.target = game.player  # Set the target as the player
         # Calculate initial direction and velocity towards the player's position at creation
         direction = (self.target.pos - self.pos).normalize()  # Normalize to get direction
@@ -871,21 +893,25 @@ class PoisonBall(pg.sprite.Sprite):
         # Move in the initial direction towards the player's position at creation
         self.pos += self.velocity * self.game.dt
         self.rect.center = self.pos
-
-        # Check for collision with the player
+        DotEffect(self.game, self.target, 5, 5000, 500)
+        self.apply_dot_effect()
         if pg.sprite.collide_rect(self, self.target):
-            self.apply_dot_effect()
-            self.game.map_img.blit(self.game.poison_puddle, self.pos - vec(55, 55))
+            PoisonPuddle(self.game, self.pos)
+            self.game.player.health -= self.damage
+        if pg.sprite.spritecollideany(self,self.game.walls):
+            PoisonPuddle(self.game, self.pos)
             self.kill()
+            
+        
 
     def apply_dot_effect(self):
         dot_effect = DotEffect(self.game, self.target, 5, 5000, 500)
         self.target.apply_dot(dot_effect)
 
 class PoisonPuddle(pg.sprite.Sprite):
-    def __init__(self, game, pos, damage):
-        self._layer = BULLET_LAYER
-        self.groups = game.all_sprites, game.bullets
+    def __init__(self, game, pos):
+        self._layer = WALL_LAYER
+        self.groups = game.all_sprites, game.mob_bullets
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.image = game.mob_weapon_images['poison_puddle']
@@ -893,25 +919,22 @@ class PoisonPuddle(pg.sprite.Sprite):
         self.hit_rect = self.rect
         self.pos = vec(pos)
         self.rect.center = pos
-        self.damage = damage
+        self.rot = 0
+        self.damage = POISON_DAMAGE
+        self.health = 50
         self.target = game.player  # Set the target as the player
         self.last_damage_time = 0  # Track the last damage time
         self.damage_interval = 500  # Damage interval in milliseconds
         self.spawn_time = pg.time.get_ticks()  # Track the spawn time
-        self.duration = 5000  # Duration of the poison puddle in milliseconds
+        self.duration = 3000  # Duration of the poison puddle in milliseconds
 
     def update(self):
-        # Check for collision with the player
-        if pg.sprite.collide_rect(self, self.target):
-            self.apply_dot_effect()
-            self.game.map_img.blit(self.game.poison_puddle, self.pos - vec(55, 55))
+        if pg.time.get_ticks() - self.spawn_time > self.duration:
             self.kill()
-
-    def apply_dot_effect(self):
-        current_time = pg.time.get_ticks()
-        if current_time - self.last_damage_time > self.damage_interval:
-            self.target.got_hit(self.damage)
-            self.last_damage_time = current_time
+        if pg.time.get_ticks() - self.last_damage_time > self.damage_interval:
+            self.target.health -= self.damage
+            self.last_damage_time = pg.time.get_ticks()
+   
 
 class RobotMob(Mob):
     def __init__(self, game, x, y):
