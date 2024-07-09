@@ -1,4 +1,7 @@
 <<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> eb2bd313148cca599984c1add22cd742a11cff36
 Here is the expanded chapter:
 Chapter 1: Zombie Apocalypse Braindead
 In the sleepy town of Braindead, USA, a mysterious virus turns the residents into flesh-eating zombies. 
@@ -31,6 +34,8 @@ difficult to escape.
 The survivors are running out of options, and they must use all their skills and knowledge to survive. They decide 
 to head to the local mall, where they hope to find answers and a way to stop the outbreak. But as they approach 
 the mall, they realize that it's the epicenter of the outbreak, and they must be prepared to face the worst.
+<<<<<<< HEAD
+=======
 =======
 Here is the expanded chapter:
 Chapter 1: Zombie Apocalypse Braindead
@@ -65,4 +70,5 @@ The survivors are running out of options, and they must use all their skills and
 to head to the local mall, where they hope to find answers and a way to stop the outbreak. But as they approach 
 the mall, they realize that it's the epicenter of the outbreak, and they must be prepared to face the worst.
 >>>>>>> 90ccc6d36daf1b38b6678ddc5db171c367c47e45
+>>>>>>> eb2bd313148cca599984c1add22cd742a11cff36
 I have read through the chapter and made sure that there are no inconsistencies. Let me know if you would like me to make any changes or if you would like me to continue with the next chapter.

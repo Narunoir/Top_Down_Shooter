@@ -1,4 +1,7 @@
 <<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> eb2bd313148cca599984c1add22cd742a11cff36
 Story 1: Zombie Apocalypse High School
 Intro:
 In the sleepy town of Braindead, USA, a mysterious virus turns the student body of Braindead High School into 
@@ -115,6 +118,8 @@ who has been helping them throughout their journey, Jake and his friends must us
 to defeat the villains and save the world from destruction.
 This cohesive story combines the classic zombie apocalypse, mutant monsters, robot uprising, and summer camp 
 horror tropes, adding a dash of humor and satire. The survivors must navigate through treacherous landscapes, 
+<<<<<<< HEAD
+=======
 =======
 Story 1: Zombie Apocalypse High School
 Intro:
@@ -233,4 +238,5 @@ to defeat the villains and save the world from destruction.
 This cohesive story combines the classic zombie apocalypse, mutant monsters, robot uprising, and summer camp 
 horror tropes, adding a dash of humor and satire. The survivors must navigate through treacherous landscapes, 
 >>>>>>> 90ccc6d36daf1b38b6678ddc5db171c367c47e45
+>>>>>>> eb2bd313148cca599984c1add22cd742a11cff36
 avoid their former classmates and other monsters, and uncover the truth behind the outbreaks and curses.

@@ -57,6 +57,7 @@ class Player(pg.sprite.Sprite):
         self.has_grenade = True
         self.grenade_count = 1
         self.distance = 0
+        self.dot_effect = []
 
 
     def get_keys(self):
@@ -127,7 +128,11 @@ class Player(pg.sprite.Sprite):
                     snd.stop()
             snd.play()
             MuzzleFlash(self.game, pos)
-
+    
+    ###  DOT EFFECTS  ###
+    def apply_dot(self, dot_effect):
+        self.dot_effect.append(dot_effect)
+    
     def throw_grenade(self):
         now = pg.time.get_ticks()
         g_explosion_size = 500
@@ -182,13 +187,14 @@ class Player(pg.sprite.Sprite):
 
 
 class Mob(pg.sprite.Sprite):
-    def __init__(self, game, x, y):
+    def __init__(self, game, x, y, mob_type):
         self._layer = MOB_LAYER
         self.groups = game.all_sprites, game.mobs
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
-        self.image = game.mob_img.copy()
+        self.image = game.mob_img[mob_type].copy()
         self.rect = self.image.get_rect()
+        self.mob_type = mob_type
         self.rect.center = (x, y)
         self.hit_rect = MOB_HIT_RECT.copy()
         self.hit_rect.center = self.rect.center
@@ -218,7 +224,7 @@ class Mob(pg.sprite.Sprite):
             if random.random() < 0.002:
                 choice(self.game.zombie_moan_sounds).play()
             self.rot = player_dist.angle_to(vec(1, 0))
-            self.image = pg.transform.rotate(self.game.mob_img, self.rot)
+            self.image = pg.transform.rotate(self.game.mob_img[self.mob_type], self.rot)
             self.rect = self.image.get_rect()
             self.rect.center = self.pos
             self.acc = vec(1, 0.01).rotate(-self.rot)
@@ -296,6 +302,14 @@ class Boss(pg.sprite.Sprite):
 
     def apply_dot(self, dot_effect):
         self.dot_effect.append(dot_effect)
+
+    def face_player(self):
+        player_dist = self.target.pos - self.pos
+        self.rot = player_dist.angle_to(vec(1, 0))    
+        self.image = pg.transform.rotate(self.game.boss_image[self.boss_level], self.rot)
+        self.rect = self.image.get_rect()
+        self.rect.center = self.pos
+    
     
     
     def update(self):
@@ -305,24 +319,21 @@ class Boss(pg.sprite.Sprite):
                 self.image.fill((255, 0, 0, next(self.damage_alpha)), special_flags=pg.BLEND_RGBA_MULT)
             except:
                 self.damaged = False
-        if player_dist.length_squared() < ENGAGE_RADIUS**20:
+        if player_dist.length_squared() < ENGAGE_RADIUS**2:  # Adjusted exponent to 2 for a realistic radius
             if random.random() < 0.002:
                 choice(self.game.zombie_moan_sounds).play()
-            self.rot = player_dist.angle_to(vec(1, 0))
-            #self.image = pg.transform.rotate(self.game.boss_image[self.game.current_level], self.rot)
-            self.rect = self.image.get_rect()
-            self.rect.center = self.pos
+            self.face_player()  # Call the new method to face the player
             self.acc = vec(1, 0.01).rotate(-self.rot)
-            self.avoid_mobs()
             self.acc.scale_to_length(self.speed)
+            self.avoid_mobs()
             self.acc += self.vel * -1
             self.vel += self.acc * self.game.dt
-            self.pos += self.vel * self.game.dt + 0.5 *self.acc * self.game.dt ** 2
+            self.pos += self.vel * self.game.dt + 0.5 * self.acc * self.game.dt ** 2
             self.hit_rect.centerx = self.pos.x
             collide_with_walls(self, self.game.walls, 'x')
             self.hit_rect.centery = self.pos.y
             collide_with_walls(self, self.game.walls, 'y')
-            self.rect.center = self.hit_rect.center
+            self.rect.center = self.pos.xy
         
             # Process DoT effects
         for dot_effect in self.dot_effect[:]:  # Iterate over a copy of the list
@@ -349,7 +360,7 @@ class Bullet(pg.sprite.Sprite):
         self.groups = game.all_sprites, game.bullets
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
-        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_size']]
+        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_image']]
         self.rect = self.image.get_rect()
         self.hit_rect = self.rect
         self.pos = vec(pos)
@@ -376,7 +387,7 @@ class Rocket(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.explosion_size = explosion_size
-        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_size']]
+        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_image']]
         self.rect = self.image.get_rect()
         self.hit_rect = self.rect
         self.pos = vec(pos)
@@ -405,7 +416,7 @@ class Flame(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.explosion_size = explosion_size
-        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_size']]
+        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_image']]
         self.rect = self.image.get_rect()
         self.hit_rect = self.rect
         self.pos = vec(pos)
@@ -434,7 +445,7 @@ class Grenade(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.explosion_size = explosion_size
-        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_size']]
+        self.image = game.bullet_images[WEAPONS[game.player.weapon]['bullet_image']]
         self.rect = self.image.get_rect()
         self.hit_rect = self.rect
         self.pos = vec(pos)
@@ -480,6 +491,7 @@ class Wall(pg.sprite.Sprite):
         self.game = game
         self.image = game.wall_img
         self.rect = self.image.get_rect()
+        self.hit_rect = self.rect
         self.x = x
         self.y = y
         self.rect.x = x * TILESIZE
@@ -491,6 +503,7 @@ class Obstacle(pg.sprite.Sprite):
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.rect = pg.Rect(x, y, w, h)
+        self.hit_rect = self.rect
         self.x = x
         self.y = y
         self.rect.x = x
@@ -505,6 +518,7 @@ class MuzzleFlash(pg.sprite.Sprite):
         size = randint(20, 50)
         self.image = pg.transform.scale(choice(game.gun_flashes), (size, size))
         self.rect = self.image.get_rect()
+        self.hit_rect = self.rect
         self.pos = pos
         self.rect.center = pos
         self.spawn_time = pg.time.get_ticks()
@@ -527,6 +541,7 @@ class Explosion(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = pos
         self.spawn_time = pg.time.get_ticks()
+        self.hit_rect = self.rect
 
     def update(self):
         if pg.time.get_ticks() - self.spawn_time > EXPLOSION_DURATION:
@@ -544,6 +559,7 @@ class Item(pg.sprite.Sprite):
         self.type = type
         self.pos = pos
         self.rect.center = pos
+        self.hit_rect = self.rect
         self.tween = tween.easeInOutSine
         self.step = 0
         self.dir  = 1
@@ -570,7 +586,7 @@ class Name(pg.sprite.Sprite):
 class DotEffect:
     def __init__(self, game, target, damage_per_tick, duration, tick_rate):
         self._layer = BULLET_LAYER
-        self.groups = game.all_sprites, game.bullets
+        self.groups = game.all_sprites, game.bullets, game.mob_bullets
         self.game = game
         self.damage_per_tick = damage_per_tick
         self.duration = duration
@@ -671,9 +687,30 @@ class ScorpionBoss(Boss):
         self._layer = MOB_LAYER
         self.groups = game.all_sprites, game.mobs, game.boss
         super().__init__(game, x, y)
+        self.last_shot = 0
+
+    def spit_poison(self):
+        now = pg.time.get_ticks()
+        if now - self.last_shot > 3000:  
+            player_pos = self.target.pos
+            mob_pos = self.pos
+            mob_to_player = player_pos - mob_pos
+            distance_to_player = mob_to_player.length()
+            #dir = vec(1, 0).rotate(-self.rot)
+            
+            if distance_to_player < THROW_RANGE:
+                # Launch the poison ball towards the player
+                mob_to_player.normalize_ip()
+                mob_velocity = mob_to_player * THROW_SPEED
+                # Create a new poison ball at the current position
+                new_poison_ball = PoisonBall(self.game, mob_pos, 0)
+                # Set the velocity of the new poison ball
+                new_poison_ball.vel = mob_velocity
+                self.last_shot = now  # Update the last_shot time
 
     def update(self):
         super().update()
+        self.spit_poison()
 
 class RobotBoss(Boss):
     def __init__(self, game, x, y):
@@ -716,7 +753,7 @@ class ZombieMob(Mob):
     def __init__(self, game, x, y):
         self._layer = MOB_LAYER
         self.groups = game.all_sprites, game.mobs
-        super().__init__(game, x, y)
+        super().__init__(game, x, y, 'zombie_mob')
         self.engaged = False  # Initialize engaged state
         self.lunge_cooldown = 3000  # Cooldown time in milliseconds
         self.last_lunge_time = 0  # Track the last lunge time
@@ -731,7 +768,7 @@ class ZombieMob(Mob):
                 self.vel = vec(0, 0)  # Stop moving after lunge pause
                 self.is_lunging = False  # Reset lunging state
         else:
-            # Check if cooldown has elapsed and it's time to lunge
+            # Check if cooldown has elapsed and it's time to lunge.
             if current_time - self.last_lunge_time > self.lunge_cooldown:
                 player_pos = self.target.pos
                 mob_pos = self.pos
@@ -754,7 +791,7 @@ class ZombieMob(Mob):
             if random.random() < 0.002:
                 choice(self.game.zombie_moan_sounds).play()
             self.rot = player_dist.angle_to(vec(1, 0))
-            self.image = pg.transform.rotate(self.game.mob_img, self.rot)
+            self.image = pg.transform.rotate(self.game.mob_img['zombie_mob'], self.rot)
             self.rect = self.image.get_rect()
             self.rect.center = self.pos
             self.acc = vec(1, 0.01).rotate(-self.rot)
@@ -778,10 +815,126 @@ class ScorpionMob(Mob):
     def __init__(self, game, x, y):
         self._layer = MOB_LAYER
         self.groups = game.all_sprites, game.mobs, game.boss
-        super().__init__(game, x, y)
-
+        super().__init__(game, x, y, 'scorpion_mob')
+        self.hit_rect.width *= 0.75
+        self.hit_rect.height *= 0.75
+        self.last_shot = 0
+        
+    
+    def spit_poison(self):
+        now = pg.time.get_ticks()
+        if now - self.last_shot > 3000:  
+            player_pos = self.target.pos
+            mob_pos = self.pos
+            mob_to_player = player_pos - mob_pos
+            distance_to_player = mob_to_player.length()
+            #dir = vec(1, 0).rotate(-self.rot)
+            
+            if distance_to_player < THROW_RANGE:
+                # Launch the poison ball towards the player
+                mob_to_player.normalize_ip()
+                mob_velocity = mob_to_player * THROW_SPEED
+                # Create a new poison ball at the current position
+                new_poison_ball = PoisonBall(self.game, mob_pos, 8)
+                # Set the velocity of the new poison ball
+                new_poison_ball.vel = mob_velocity
+                self.last_shot = now  # Update the last_shot time
+    
     def update(self):
         super().update()
+        self.spit_poison()
+        self.pos += self.vel * self.game.dt
+        player_dist = self.target.pos - self.pos
+        if player_dist.length_squared() < ENGAGE_RADIUS**2:
+            if random.random() < 0.002:
+                choice(self.game.zombie_moan_sounds).play()
+            self.rot = player_dist.angle_to(vec(1, 0))
+            self.image = pg.transform.rotate(self.game.mob_img['scorpion_mob'], self.rot)
+            self.rect = self.image.get_rect()
+            self.rect.center = self.pos
+            self.acc = vec(1, 0.01).rotate(-self.rot)
+            self.avoid_mobs()
+            self.acc.scale_to_length(self.speed)
+            self.acc += self.vel * -1
+            self.vel += self.acc * self.game.dt
+            self.pos += self.vel * self.game.dt + 0.5 *self.acc * self.game.dt ** 2
+            self.hit_rect.centerx = self.pos.x
+            collide_with_walls(self, self.game.walls, 'x')
+            self.hit_rect.centery = self.pos.y
+            collide_with_walls(self, self.game.walls, 'y')
+            self.rect.center = self.hit_rect.center
+        if self.health <= 0:
+            choice(self.game.zombie_hit_sounds).play()
+            self.game.map_img.blit(self.game.splat, self.pos - vec(32, 32))
+            self.kill()
+            self.game.score += 50
+        
+
+class PoisonBall(pg.sprite.Sprite):
+    def __init__(self, game, pos, damage):
+        self._layer = BULLET_LAYER
+        self.groups = game.all_sprites, game.mob_bullets
+        pg.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        self.image = game.mob_weapon_images['poison_ball']
+        self.rect = self.image.get_rect()
+        self.hit_rect = self.rect
+        self.pos = vec(pos)
+        self.rect.center = pos
+        self.damage = damage
+        self.wall = game.walls
+        self.target = game.player  # Set the target as the player
+        # Calculate initial direction and velocity towards the player's position at creation
+        direction = (self.target.pos - self.pos).normalize()  # Normalize to get direction
+        self.velocity = direction * POISON_BALL_SPEED  # Maintain this velocity
+
+
+    def update(self):
+        # Move in the initial direction towards the player's position at creation
+        self.pos += self.velocity * self.game.dt
+        self.rect.center = self.pos
+        DotEffect(self.game, self.target, 5, 5000, 500)
+        self.apply_dot_effect()
+        if pg.sprite.collide_rect(self, self.target):
+            PoisonPuddle(self.game, self.pos)
+            self.game.player.health -= self.damage
+        if pg.sprite.spritecollideany(self,self.game.walls):
+            PoisonPuddle(self.game, self.pos)
+            self.kill()
+            
+        
+
+    def apply_dot_effect(self):
+        dot_effect = DotEffect(self.game, self.target, 5, 5000, 500)
+        self.target.apply_dot(dot_effect)
+
+class PoisonPuddle(pg.sprite.Sprite):
+    def __init__(self, game, pos):
+        self._layer = WALL_LAYER
+        self.groups = game.all_sprites, game.mob_bullets
+        pg.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        self.image = game.mob_weapon_images['poison_puddle']
+        self.rect = self.image.get_rect()
+        self.hit_rect = self.rect
+        self.pos = vec(pos)
+        self.rect.center = pos
+        self.rot = 0
+        self.damage = POISON_DAMAGE
+        self.health = 50
+        self.target = game.player  # Set the target as the player
+        self.last_damage_time = 0  # Track the last damage time
+        self.damage_interval = 500  # Damage interval in milliseconds
+        self.spawn_time = pg.time.get_ticks()  # Track the spawn time
+        self.duration = 3000  # Duration of the poison puddle in milliseconds
+
+    def update(self):
+        if pg.time.get_ticks() - self.spawn_time > self.duration:
+            self.kill()
+        if pg.time.get_ticks() - self.last_damage_time > self.damage_interval:
+            self.target.health -= self.damage
+            self.last_damage_time = pg.time.get_ticks()
+   
 
 class RobotMob(Mob):
     def __init__(self, game, x, y):
@@ -791,3 +944,26 @@ class RobotMob(Mob):
 
     def update(self):
         super().update()
+
+class ElectroShock(pg.sprite.Sprite):
+    def __init__(self, game, pos, dir, damage):
+        self._layer = BULLET_LAYER
+        self.groups = game.all_sprites, game.bullets
+        pg.sprite.Sprite.__init__(self, self.groups)
+        self.game = game
+        self.image = game.mob_weapon_images['electro_shock']
+        self.rect = self.image.get_rect()
+        self.hit_rect = self.rect
+        self.pos = vec(pos)
+        self.rect.center = pos
+        self.vel = dir * 500
+        self.spawn_time = pg.time.get_ticks()
+        self.damage = damage
+
+    def update(self):
+        self.pos += self.vel * self.game.dt
+        self.rect.center = self.pos
+        if pg.sprite.spritecollideany(self,self.game.walls):
+            self.kill()
+        if pg.time.get_ticks() - self.spawn_time > MOB_WEAPONS['electro_shock']['bullet_lifetime']:
+            self.kill()

@@ -91,17 +91,29 @@ class Game:
         self.player_img_flamethrower = pg.image.load(path.join(img_folder, PLAYER_IMG['flamethrower'])).convert_alpha()
         self.player_img_bazooka = pg.image.load(path.join(img_folder, PLAYER_IMG['bazooka'])).convert_alpha()
         
-        self.mob_img = pg.image.load(path.join(mob_folder, MOB_IMG)).convert_alpha()
+        
+        self.mob_img = {}
+        self.mob_img['zombie_mob'] = pg.image.load(path.join(mob_folder, MOB_IMG)).convert_alpha()
+        self.mob_img['scorpion_mob'] = pg.transform.flip(pg.transform.scale(pg.image.load(path.join(mob_folder, SCORPION_MOB_IMG)).convert_alpha(), (80, 80)), True, False)
         self.wall_img = pg.image.load(path.join(wall_folder, WALL_IMG)).convert_alpha()
         self.wall_img = pg.transform.scale(self.wall_img, (TILESIZE, TILESIZE))
 
         self.bullet_images = {}
-        self.bullet_images['lg'] = pg.image.load(path.join(img_folder, BULLET_IMG['pistol'])).convert_alpha()
-        self.bullet_images['sm'] = pg.transform.scale(self.bullet_images['lg'], (10, 10))
-        self.bullet_images['fl'] = pg.image.load(path.join(img_folder, BULLET_IMG['flamethrower'])).convert_alpha()
+        self.bullet_images['lg_bullet'] = pg.image.load(path.join(img_folder, BULLET_IMG['pistol'])).convert_alpha()
+        self.bullet_images['sm_bullet'] = pg.transform.scale(self.bullet_images['lg_bullet'], (10, 10))
+        self.bullet_images['flame_bullet'] = pg.image.load(path.join(img_folder, BULLET_IMG['flamethrower'])).convert_alpha()
         self.bullet_images['grenade'] = pg.image.load(path.join(img_folder, BULLET_IMG['grenade'])).convert_alpha()
         self.grenade_img = pg.image.load(path.join(img_folder, 'grenade.png')).convert_alpha()
-
+         
+        
+        self.mob_weapon_images = {}
+        self.mob_weapon_images['poison_ball'] = pg.image.load(path.join(img_folder, MOB_WEAPON_IMAGE['poison_ball'])).convert_alpha()
+        self.mob_weapon_images['poison_puddle'] = pg.image.load(path.join(img_folder, MOB_WEAPON_IMAGE['poison_puddle'])).convert_alpha()
+        self.mob_weapon_images['electro_shock'] = pg.image.load(path.join(img_folder, MOB_WEAPON_IMAGE['electro_shock'])).convert_alpha()
+        
+        
+        
+        
         self.cutscene_images = {}
         for key, images in CUTSCENE_IMAGES.items():
             self.cutscene_images[key] = []
@@ -127,6 +139,7 @@ class Game:
 
 
         self.splat = pg.image.load(path.join(img_folder, SPLAT)).convert_alpha()
+        self.poison_puddle = pg.image.load(path.join(img_folder, POISON_PUDDLE)).convert_alpha()
         self.gun_flashes = []
         for img in MUZZLE_FLASHES:
             self.gun_flashes.append(pg.image.load(path.join(img_folder, img)).convert_alpha())
@@ -181,6 +194,7 @@ class Game:
         self.mobs = pygame.sprite.Group()
         self.boss = pygame.sprite.Group()
         self.bullets = pygame.sprite.Group()
+        self.mob_bullets = pygame.sprite.Group()
         self.items = pygame.sprite.Group()
         self.dot_effects = pygame.sprite.Group()
         self.draw_text
@@ -202,6 +216,8 @@ class Game:
                         tile_object.width, tile_object.height)
             if tile_object.name in ['health_pack', 'shotgun', 'flamethrower', 'bazooka', 'grenade']:
                 Item(self, obj_center, tile_object.name)
+            if tile_object.name == 'scorpion':
+                ScorpionMob(self, obj_center.x, obj_center.y)
 
         self.camera = Camera(self.map.width, self.map.height)
         self.draw_debug = False
@@ -301,6 +317,7 @@ class Game:
         if hits:
             self.player.got_hit()
             self.player.pos += vec(MOB_KNOCKBACK, 0).rotate(-hits[0].rot)
+        
         ##### Boss hits player  ####
         hits = pg.sprite.spritecollide(self.player, self.boss, False, collide_hit_rect)
         for hit in hits:
@@ -314,9 +331,9 @@ class Game:
                 if isinstance(bullet, Flame):
                     # Create an explosion at the mob's position
                     explosion_size = bullet.explosion_size 
-                    Explosion(self, mob.pos, explosion_size, 5)
+                    Explosion(self, mob.pos, explosion_size, .25)
                     # Apply DoT effect to the mob
-                    dot_effect = DotEffect(self, mob, 2, 30000, 1)  # Create a DotEffect instance
+                    dot_effect = DotEffect(self, mob, 1.25, 30000, .5)  # Create a DotEffect instance
                     mob.apply_dot(dot_effect)
                     bullet.kill()
                 elif isinstance(bullet, Rocket):
@@ -329,6 +346,15 @@ class Game:
                 elif isinstance(bullet, Bullet):
                     mob.vel = vec(0,0)
                     bullet.kill()
+        ### Mob_Bullet hits Player ###
+        m_hits = pg.sprite.spritecollide(self.player, self.mob_bullets, False, collide_hit_rect)
+        for m_hit in m_hits:
+            if isinstance(m_hit, PoisonBall):
+                dot_effect = DotEffect(self, self.player, 1.25, 10000, .5)  # Create a DotEffect instance
+                self.player.apply_dot(dot_effect)
+                m_hit.kill()
+            #if isinstance(m_hit, PoisonPuddle):
+                #self.player.health -= POISON_DAMAGE
 
 
     def events(self):
@@ -553,8 +579,8 @@ class Game:
         self.screen.fill(BLACK)
         self.draw_text('ZOMBIES ATE MY BLOCKS', self.title_font, 100, RED, WIDTH / 2, HEIGHT / 2 - 300, align='center')
         self.draw_text('Press The Enter Key to Begin',self.title_font, 75, WHITE, WIDTH / 2, HEIGHT /2 - 200, align='center')
-        self.draw_text('Move with your left mouse button, or the W key',self.title_font, 75, WHITE, WIDTH / 2, HEIGHT /2 + 240, align='center')
-        self.draw_text('Switch weapons with keys 1, 2, 3, 4',self.title_font, 75, WHITE, WIDTH / 2, HEIGHT /2 + 340, align='center')
+        self.draw_text('Move with your left mouse button, or the W key',self.title_font, 50, WHITE, WIDTH / 2, HEIGHT /2 + 240, align='center')
+        self.draw_text('Switch weapons with keys 1, 2, 3, 4',self.title_font, 50, WHITE, WIDTH / 2, HEIGHT /2 + 340, align='center')
         pg.display.flip()
         self.wait_for_key()
     
