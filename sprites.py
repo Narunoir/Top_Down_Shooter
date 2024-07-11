@@ -932,7 +932,7 @@ class PoisonPuddle(pg.sprite.Sprite):
         if pg.time.get_ticks() - self.spawn_time > self.duration:
             self.kill()
         if pg.time.get_ticks() - self.last_damage_time > self.damage_interval:
-            self.target.health -= self.damage
+            #self.target.health -= self.damage
             self.last_damage_time = pg.time.get_ticks()
    
 

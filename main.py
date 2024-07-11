@@ -350,11 +350,11 @@ class Game:
         m_hits = pg.sprite.spritecollide(self.player, self.mob_bullets, False, collide_hit_rect)
         for m_hit in m_hits:
             if isinstance(m_hit, PoisonBall):
-                dot_effect = DotEffect(self, self.player, 1.25, 10000, .5)  # Create a DotEffect instance
+                dot_effect = DotEffect(self, self.player, 1.25, 3000, .5)  # Create a DotEffect instance
                 self.player.apply_dot(dot_effect)
                 m_hit.kill()
-            #if isinstance(m_hit, PoisonPuddle):
-                #self.player.health -= POISON_DAMAGE
+            if isinstance(m_hit, PoisonPuddle):
+                self.player.health -= POISON_PUDDLE_DAMAGE
 
 
     def events(self):
