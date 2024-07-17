@@ -94,7 +94,8 @@ class Game:
         
         self.mob_img = {}
         self.mob_img['zombie_mob'] = pg.image.load(path.join(mob_folder, MOB_IMG)).convert_alpha()
-        self.mob_img['scorpion_mob'] = pg.transform.flip(pg.transform.scale(pg.image.load(path.join(mob_folder, SCORPION_MOB_IMG)).convert_alpha(), (80, 80)), True, False)
+        self.mob_img['scorpion_mob'] = pg.transform.rotate(pg.transform.scale(pg.image.load(path.join(mob_folder, SCORPION_MOB_IMG)).convert_alpha(), (80, 80)), 90)
+        self.mob_img['robot_mob'] = pg.transform.rotate(pg.transform.flip(pg.transform.scale(pg.image.load(path.join(mob_folder, ROBOT_MOB_IMG)).convert_alpha(), (80, 80)), True, False), -90)
         self.wall_img = pg.image.load(path.join(wall_folder, WALL_IMG)).convert_alpha()
         self.wall_img = pg.transform.scale(self.wall_img, (TILESIZE, TILESIZE))
 
@@ -218,6 +219,8 @@ class Game:
                 Item(self, obj_center, tile_object.name)
             if tile_object.name == 'scorpion':
                 ScorpionMob(self, obj_center.x, obj_center.y)
+            if tile_object.name == 'robot':
+                RobotMob(self, obj_center.x, obj_center.y)
 
         self.camera = Camera(self.map.width, self.map.height)
         self.draw_debug = False
@@ -354,6 +357,8 @@ class Game:
                 self.player.apply_dot(dot_effect)
                 m_hit.kill()
             if isinstance(m_hit, PoisonPuddle):
+                if self.player.health > 0:
+                    self.player.health -= POISON_PUDDLE_DAMAGE
                 self.player.health -= POISON_PUDDLE_DAMAGE
 
 

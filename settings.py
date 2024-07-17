@@ -117,10 +117,12 @@ WEAPONS['grenade'] =  {'bullet_speed': 750,
                       'grenade_lifetime': 1000,
                        'grenade_damage': 500}
 
- ## Mob settings
+ # Mob Images
 MOB_IMG       = 'zoimbie1_hold.png'
 SCORPION_MOB_IMG = '2d_scorpion.png'
+ROBOT_MOB_IMG = 'robot_mob.png'
 
+ ## Mob settings
 MOB_SPEEDS    = [75, 80, 50, 90, 65]
 MOB_HIT_RECT  = pg.Rect(0, 0, 30, 30)
 MOB_HEALTH    = 100
@@ -135,6 +137,7 @@ POISON_BALL_SPEED = 500
 POISON_PUDDLE = 'poison_puddle.png'
 POISON_DAMAGE = 3
 POISON_PUDDLE_DAMAGE = .25
+ELECTRO_SHOCK_SPEED = 500
 
 
 
