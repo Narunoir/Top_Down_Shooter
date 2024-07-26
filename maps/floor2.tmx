@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="64" tileheight="64" infinite="0" nextlayerid="6" nextobjectid="301">
+<map version="1.9" tiledversion="1.9.2" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="64" tileheight="64" infinite="0" nextlayerid="6" nextobjectid="411">
  <tileset firstgid="1" source="Kenny Topdown Tiles 1.tsx"/>
  <tileset firstgid="541" source="Desert Tiles.tsx"/>
  <tileset firstgid="557" source="Desert Objects.tsx"/>
@@ -601,6 +601,116 @@
   <object id="292" name="zombie" x="656" y="3376" width="32" height="32"/>
   <object id="293" name="zombie" x="2080" y="1440" width="16" height="16"/>
   <object id="294" name="zombie" x="2016" y="1504" width="16" height="16"/>
+  <object id="301" name="scorpion" x="989.5" y="202" width="16" height="16"/>
+  <object id="302" name="scorpion" x="974" y="219.25" width="16" height="16"/>
+  <object id="303" name="scorpion" x="976.25" y="185.5" width="16" height="16"/>
+  <object id="304" name="scorpion" x="1004.5" y="217.75" width="16" height="16"/>
+  <object id="306" name="scorpion" x="342.25" y="1121.75" width="16" height="16"/>
+  <object id="307" name="scorpion" x="373.917" y="1114.08" width="16" height="16"/>
+  <object id="308" name="scorpion" x="378.25" y="1147.75" width="16" height="16"/>
+  <object id="309" name="scorpion" x="339.583" y="1149.75" width="16" height="16"/>
+  <object id="310" name="scorpion" x="254.917" y="1860.75" width="16" height="16"/>
+  <object id="311" name="scorpion" x="280.583" y="1853.75" width="16" height="16"/>
+  <object id="312" name="scorpion" x="261.25" y="1890.42" width="16" height="16"/>
+  <object id="313" name="scorpion" x="558.917" y="2745.75" width="16" height="16"/>
+  <object id="314" name="scorpion" x="589.583" y="2745.75" width="16" height="16"/>
+  <object id="315" name="scorpion" x="540.25" y="2771.08" width="16" height="16"/>
+  <object id="316" name="scorpion" x="580.25" y="2771.08" width="16" height="16"/>
+  <object id="317" name="scorpion" x="626.917" y="2771.08" width="16" height="16"/>
+  <object id="318" name="scorpion" x="657.583" y="2728.42" width="16" height="16"/>
+  <object id="319" name="scorpion" x="469.583" y="3704.42" width="16" height="16"/>
+  <object id="320" name="scorpion" x="470.917" y="3667.08" width="16" height="16"/>
+  <object id="321" name="scorpion" x="518.917" y="3699.08" width="16" height="16"/>
+  <object id="322" name="scorpion" x="449.583" y="4485.08" width="31" height="26"/>
+  <object id="323" name="scorpion" x="538.583" y="4447.08" width="31" height="26"/>
+  <object id="324" name="scorpion" x="556.583" y="4535.08" width="31" height="26"/>
+  <object id="325" name="scorpion" x="30.5833" y="4696.08" width="31" height="26"/>
+  <object id="326" name="scorpion" x="71.5833" y="4555.08" width="31" height="26"/>
+  <object id="327" name="scorpion" x="271.583" y="4992.08" width="31" height="26"/>
+  <object id="328" name="scorpion" x="587.583" y="5500.08" width="31" height="26"/>
+  <object id="329" name="scorpion" x="443.583" y="5573.08" width="31" height="26"/>
+  <object id="330" name="scorpion" x="579.583" y="5662.08" width="31" height="26"/>
+  <object id="331" name="scorpion" x="297.583" y="6125.08" width="31" height="26"/>
+  <object id="336" name="scorpion" x="1393.58" y="5973.08" width="31" height="26"/>
+  <object id="337" name="scorpion" x="1375.58" y="5900.08" width="31" height="26"/>
+  <object id="338" name="scorpion" x="1514.58" y="5921.08" width="31" height="26"/>
+  <object id="339" name="scorpion" x="2077.58" y="5978.08" width="31" height="26"/>
+  <object id="340" name="scorpion" x="2135.58" y="5987.08" width="31" height="26"/>
+  <object id="342" name="scorpion" x="2387.58" y="5472.08" width="31" height="26"/>
+  <object id="343" name="scorpion" x="2501.58" y="5276.08" width="31" height="26"/>
+  <object id="344" name="scorpion" x="2284.58" y="5212.08" width="31" height="26"/>
+  <object id="345" name="scorpion" x="1978.58" y="4884.08" width="31" height="26"/>
+  <object id="346" name="scorpion" x="2218.58" y="4909.08" width="31" height="26"/>
+  <object id="347" name="scorpion" x="2547.58" y="5036.08" width="31" height="26"/>
+  <object id="348" name="scorpion" x="2932.58" y="5325.08" width="31" height="26"/>
+  <object id="349" name="scorpion" x="3019.58" y="5335.08" width="31" height="26"/>
+  <object id="350" name="scorpion" x="2906.58" y="5382.08" width="31" height="26"/>
+  <object id="351" name="scorpion" x="2991.58" y="5394.08" width="31" height="26"/>
+  <object id="352" name="scorpion" x="3133.58" y="5569.08" width="31" height="26"/>
+  <object id="353" name="scorpion" x="3269.58" y="5446.08" width="31" height="26"/>
+  <object id="354" name="scorpion" x="3922.58" y="5419.08" width="31" height="26"/>
+  <object id="355" name="scorpion" x="3921.58" y="5462.08" width="31" height="26"/>
+  <object id="356" name="scorpion" x="3919.58" y="5522.08" width="31" height="26"/>
+  <object id="357" name="scorpion" x="4670.58" y="5592.08" width="31" height="26"/>
+  <object id="358" name="scorpion" x="4620.58" y="5529.08" width="31" height="26"/>
+  <object id="359" name="scorpion" x="4620.58" y="5587.08" width="31" height="26"/>
+  <object id="408" name="scorpion" x="4344.58" y="4525.08" width="31" height="26"/>
+  <object id="409" name="scorpion" x="4454.58" y="4493.08" width="31" height="26"/>
+  <object id="410" name="scorpion" x="4394.58" y="4607.08" width="31" height="26"/>
+  <object id="360" name="scorpion" x="5639.58" y="5923.08" width="31" height="26"/>
+  <object id="361" name="scorpion" x="5688.58" y="5901.08" width="31" height="26"/>
+  <object id="362" name="scorpion" x="5696.58" y="5960.08" width="31" height="26"/>
+  <object id="363" name="scorpion" x="5774.58" y="4732.08" width="31" height="26"/>
+  <object id="364" name="scorpion" x="5787.58" y="4812.08" width="31" height="26"/>
+  <object id="365" name="scorpion" x="6017.58" y="4723.08" width="31" height="26"/>
+  <object id="366" name="scorpion" x="6080.58" y="4823.08" width="31" height="26"/>
+  <object id="367" name="scorpion" x="5546.58" y="4010.08" width="31" height="26"/>
+  <object id="368" name="scorpion" x="5622.58" y="3994.08" width="31" height="26"/>
+  <object id="372" name="scorpion" x="5897.58" y="3388.08" width="31" height="26"/>
+  <object id="375" name="scorpion" x="5041.58" y="2895.08" width="31" height="26"/>
+  <object id="376" name="scorpion" x="4950.67" y="2979.93" width="31" height="26"/>
+  <object id="377" name="scorpion" x="5035.52" y="3004.17" width="31" height="26"/>
+  <object id="379" name="scorpion" x="4365.83" y="2022.36" width="31" height="26"/>
+  <object id="380" name="scorpion" x="4484.01" y="1992.05" width="31" height="26"/>
+  <object id="381" name="scorpion" x="4393.1" y="1876.9" width="31" height="26"/>
+  <object id="382" name="scorpion" x="4414.31" y="1682.96" width="31" height="26"/>
+  <object id="383" name="scorpion" x="5496.13" y="979.932" width="31" height="26"/>
+  <object id="384" name="scorpion" x="5553.7" y="634.477" width="31" height="26"/>
+  <object id="390" name="scorpion" x="4853.7" y="389.477" width="31" height="26"/>
+  <object id="393" name="scorpion" x="3083.7" y="879.477" width="31" height="26"/>
+  <object id="394" name="scorpion" x="2995.7" y="821.477" width="31" height="26"/>
+  <object id="395" name="scorpion" x="2995.7" y="935.477" width="31" height="26"/>
+  <object id="396" name="scorpion" x="2237.7" y="689.477" width="31" height="26"/>
+  <object id="397" name="scorpion" x="2317.7" y="663.477" width="31" height="26"/>
+  <object id="398" name="scorpion" x="2281.7" y="767.477" width="31" height="26"/>
+  <object id="399" name="scorpion" x="1673.7" y="2645.98" width="31" height="26"/>
+  <object id="405" name="scorpion" x="1597.7" y="3853.98" width="31" height="26"/>
+  <object id="406" name="scorpion" x="1501.7" y="3969.98" width="31" height="26"/>
+  <object id="407" name="scorpion" x="1515.7" y="3775.98" width="31" height="26"/>
+  <object id="404" name="scorpion" x="1706.2" y="2566.48" width="31" height="26"/>
+  <object id="400" name="scorpion" x="1603.7" y="2574.98" width="31" height="26"/>
+  <object id="401" name="scorpion" x="1664.7" y="2519.48" width="31" height="26"/>
+  <object id="402" name="scorpion" x="1775.7" y="2631.98" width="31" height="26"/>
+  <object id="403" name="scorpion" x="1773.7" y="2523.48" width="31" height="26"/>
+  <object id="391" name="scorpion" x="4825.7" y="314.477" width="31" height="26"/>
+  <object id="392" name="scorpion" x="4897.7" y="274.477" width="31" height="26"/>
+  <object id="385" name="scorpion" x="6029.46" y="785.992" width="31" height="26"/>
+  <object id="386" name="scorpion" x="6077.95" y="607.205" width="31" height="26"/>
+  <object id="387" name="scorpion" x="6088.95" y="389.205" width="31" height="26"/>
+  <object id="388" name="scorpion" x="5965.95" y="241.205" width="31" height="26"/>
+  <object id="389" name="scorpion" x="6039.95" y="210.205" width="31" height="26"/>
+  <object id="378" name="scorpion" x="4926.43" y="3064.78" width="31" height="26"/>
+  <object id="373" name="scorpion" x="5997.58" y="3513.08" width="31" height="26"/>
+  <object id="374" name="scorpion" x="6066.58" y="3334.08" width="31" height="26"/>
+  <object id="369" name="scorpion" x="5588.58" y="4060.08" width="31" height="26"/>
+  <object id="370" name="scorpion" x="5725.58" y="4213.08" width="31" height="26"/>
+  <object id="371" name="scorpion" x="5569.58" y="4250.08" width="31" height="26"/>
+  <object id="341" name="scorpion" x="2085.58" y="5453.08" width="31" height="26"/>
+  <object id="335" name="scorpion" x="470.583" y="6058.08" width="31" height="26"/>
+  <object id="334" name="scorpion" x="282.583" y="6022.08" width="31" height="26"/>
+  <object id="333" name="scorpion" x="357.583" y="5964.08" width="31" height="26"/>
+  <object id="332" name="scorpion" x="295.583" y="5959.08" width="31" height="26"/>
+  <object id="305" name="scorpion" x="1009" y="186.75" width="16" height="16"/>
   <object id="295" name="zombie" x="5584" y="5392" width="32" height="32"/>
   <object id="296" name="zombie" x="5680" y="5392" width="32" height="32"/>
   <object id="297" name="zombie" x="5648" y="5456" width="32" height="32"/>

@@ -58,6 +58,12 @@ class Player(pg.sprite.Sprite):
         self.grenade_count = 1
         self.distance = 0
         self.dot_effect = []
+        self.is_stunned = False
+        self.stun_start_time = 0
+        self.last_vibration_time = 0
+        self.tween = tween.easeInOutSine
+        self.step = 0
+        self.dir = 1
 
 
     def get_keys(self):
@@ -108,7 +114,7 @@ class Player(pg.sprite.Sprite):
 
     def shoot(self):
         now = pg.time.get_ticks()
-        if now - self.last_shot > WEAPONS[self.weapon]['fireing_rate']:
+        if now - self.last_shot > WEAPONS[self.weapon]['fireing_rate'] and self.is_stunned == False:
             self.last_shot = now
             dir = vec(1, 0).rotate(-self.rot)
             pos = self.pos + BARREL_OFFSET.rotate(-self.rot)
@@ -161,24 +167,69 @@ class Player(pg.sprite.Sprite):
     def got_hit(self):
         self.damaged = True
         self.damage_alpha = chain(DAMAGE_ALPHA * 2)
+
+    def damage_delay(self):
+        now = pg.time.get_ticks()
+        last_time_attacked = 0
+        saved_health = self.health
+        if now - last_time_attacked > 1000:
+            self.health = saved_health
+            saved_health = self.health
+            self.vel = vec(0, 0)            
+            last_time_attacked = now
+
+            
+    def vibration(self):
+         ## Shocked motion
+        PLAYER_SHOCK_RANGE = 10
+        PLAYER_SHOCK_SPEED = 3.5
+        offset = PLAYER_SHOCK_RANGE * (self.tween(self.step / PLAYER_SHOCK_RANGE) - 0.5)
+        self.rect.centery = self.pos.y + offset * self.dir
+        self.step += PLAYER_SHOCK_SPEED
+        if self.step > PLAYER_SHOCK_RANGE:
+            self.step = 0
+            self.dir *= -1
+            self.pos += self.vel * self.game.dt
+            self.hit_rect.centerx = self.pos.x
+            collide_with_walls(self, self.game.walls, 'x')
+            self.hit_rect.centery = self.pos.y
+            collide_with_walls(self, self.game.walls, 'y')
+            self.mouse_move()
+            self.rect.center = self.hit_rect.center
+            
+
+    def stunned_effect(self):
+        STUN_DURATION = 1000
+        now = pg.time.get_ticks()
+        if self.is_stunned:
+            self.vibration()
+            if self.stun_start_time == 0:  # Stun just started
+                self.stun_start_time = now
+                self.vel = vec(0, 0)  # Stop the player's movement
+            elif now - self.stun_start_time > STUN_DURATION:  # Stun duration ended
+                self.is_stunned = False
+                self.stun_start_time = 0  # Reset for next stun
     
     def update(self):
-        self.get_keys()
+        if self.is_stunned == True:
+            self.stunned_effect()
+            self.damage_delay()
+        else:
+            self.get_keys()
+            
+            if self.damaged:
+                try:
+                    self.image.fill((255, 0, 0, next(self.damage_alpha)), special_flags=pg.BLEND_RGBA_MULT)
+                except:
+                    self.damaged = False
+            self.pos += self.vel * self.game.dt
+            self.hit_rect.centerx = self.pos.x
+            collide_with_walls(self, self.game.walls, 'x')
+            self.hit_rect.centery = self.pos.y
+            collide_with_walls(self, self.game.walls, 'y')
+            self.mouse_move()
+            self.rect.center = self.hit_rect.center
         
-        if self.damaged:
-            try:
-                self.image.fill((255, 0, 0, next(self.damage_alpha)), special_flags=pg.BLEND_RGBA_MULT)
-            except:
-                self.damaged = False
-
-        self.pos += self.vel * self.game.dt
-        self.hit_rect.centerx = self.pos.x
-        collide_with_walls(self, self.game.walls, 'x')
-        self.hit_rect.centery = self.pos.y
-        collide_with_walls(self, self.game.walls, 'y')
-        self.mouse_move()
-        self.rect.center = self.hit_rect.center
-
     def add_health(self, amount):
         self.health += amount
         if self.health > PLAYER_HEALTH:
@@ -207,6 +258,7 @@ class Mob(pg.sprite.Sprite):
         self.speed = choice(MOB_SPEEDS)
         self.target = game.player
         self.dot_effect = []
+        self.engage_radius = ENGAGE_RADIUS
 
     def apply_dot(self, dot_effect):
         self.dot_effect.append(dot_effect)
@@ -220,7 +272,7 @@ class Mob(pg.sprite.Sprite):
 
     def update(self):
         player_dist = self.target.pos - self.pos
-        if player_dist.length_squared() < ENGAGE_RADIUS**2:
+        if player_dist.length_squared() < self.engage_radius**2:
             if random.random() < 0.002:
                 choice(self.game.zombie_moan_sounds).play()
             self.rot = player_dist.angle_to(vec(1, 0))
@@ -767,6 +819,34 @@ class ZombieMob(Mob):
             if current_time - self.last_lunge_time > self.lunge_pause_duration:
                 self.vel = vec(0, 0)  # Stop moving after lunge pause
                 self.is_lunging = False  # Reset lunging state
+                self.pos += self.vel * self.game.dt
+                self.hit_rect.centerx = self.pos.x
+                collide_with_walls(self, self.game.walls, 'x')
+                self.hit_rect.centery = self.pos.y
+                collide_with_walls(self, self.game.walls, 'y')
+        else:
+            # Check if cooldown has elapsed and it's time to lunge.
+            if current_time - self.last_lunge_time > self.lunge_cooldown:
+                player_pos = self.target.pos
+                mob_pos = self.pos
+                mob_to_player = player_pos - mob_pos
+                distance_to_player = mob_to_player.length()
+                if distance_to_player < 200:
+                    mob_to_player.normalize_ip()
+                    mob_velocity = mob_to_player * 200
+                    self.vel = mob_velocity
+                    self.last_lunge_time = current_time
+                    self.is_lunging = True  # Enter lunging state
+                    self.avoid_walls()  # Avoid walls during lunge
+
+    def avoid_walls(self):
+        current_time = pygame.time.get_ticks()
+        """Avoid walls during lunge."""
+        for wall in self.game.walls:
+            if pygame.sprite.collide_rect(self, wall):
+                self.vel = vec(0, 0)  # Stop moving if colliding with a wall
+                self.is_lunging = False  # Reset lunging state
+                break
         else:
             # Check if cooldown has elapsed and it's time to lunge.
             if current_time - self.last_lunge_time > self.lunge_cooldown:
@@ -784,10 +864,10 @@ class ZombieMob(Mob):
 
     def update(self):
         super().update()
-        self.zombie_lunge()
         self.pos += self.vel * self.game.dt
         player_dist = self.target.pos - self.pos
         if player_dist.length_squared() < ENGAGE_RADIUS**2:
+            self.zombie_lunge()
             if random.random() < 0.002:
                 choice(self.game.zombie_moan_sounds).play()
             self.rot = player_dist.angle_to(vec(1, 0))
@@ -819,6 +899,8 @@ class ScorpionMob(Mob):
         self.hit_rect.width *= 0.75
         self.hit_rect.height *= 0.75
         self.last_shot = 0
+        self.engage_radius = 250
+
         
     
     def spit_poison(self):
@@ -830,7 +912,7 @@ class ScorpionMob(Mob):
             distance_to_player = mob_to_player.length()
             #dir = vec(1, 0).rotate(-self.rot)
             
-            if distance_to_player < THROW_RANGE:
+            if distance_to_player < self.engage_radius:
                 # Launch the poison ball towards the player
                 mob_to_player.normalize_ip()
                 mob_velocity = mob_to_player * THROW_SPEED
@@ -842,10 +924,10 @@ class ScorpionMob(Mob):
     
     def update(self):
         super().update()
-        self.spit_poison()
+        #self.spit_poison()
         self.pos += self.vel * self.game.dt
         player_dist = self.target.pos - self.pos
-        if player_dist.length_squared() < ENGAGE_RADIUS**2:
+        if player_dist.length_squared() < self.engage_radius**2:
             if random.random() < 0.002:
                 choice(self.game.zombie_moan_sounds).play()
             self.rot = player_dist.angle_to(vec(1, 0))
@@ -868,6 +950,8 @@ class ScorpionMob(Mob):
             self.game.map_img.blit(self.game.splat, self.pos - vec(32, 32))
             self.kill()
             self.game.score += 50
+        if player_dist.length_squared() < self.engage_radius**2:
+            self.spit_poison()
         
 
 class PoisonBall(pg.sprite.Sprite):
@@ -881,7 +965,11 @@ class PoisonBall(pg.sprite.Sprite):
         self.hit_rect = self.rect
         self.pos = vec(pos)
         self.rect.center = pos
+        self.rot = 0
         self.damage = damage
+        self.duration = 1000  # Duration of the poison ball in milliseconds
+        self.spawn_time = pg.time.get_ticks()  # Track the spawn time
+        self.engage_radius = 250  # Engage radius in pixels
         self.wall = game.walls
         self.target = game.player  # Set the target as the player
         # Calculate initial direction and velocity towards the player's position at creation
@@ -899,6 +987,9 @@ class PoisonBall(pg.sprite.Sprite):
             PoisonPuddle(self.game, self.pos)
             self.game.player.health -= self.damage
         if pg.sprite.spritecollideany(self,self.game.walls):
+            PoisonPuddle(self.game, self.pos)
+            self.kill()
+        if pg.time.get_ticks() - self.spawn_time > self.duration:
             PoisonPuddle(self.game, self.pos)
             self.kill()
             
@@ -932,7 +1023,7 @@ class PoisonPuddle(pg.sprite.Sprite):
         if pg.time.get_ticks() - self.spawn_time > self.duration:
             self.kill()
         if pg.time.get_ticks() - self.last_damage_time > self.damage_interval:
-            self.target.health -= self.damage
+            #self.target.health -= self.damage
             self.last_damage_time = pg.time.get_ticks()
    
 
@@ -940,15 +1031,41 @@ class RobotMob(Mob):
     def __init__(self, game, x, y):
         self._layer = MOB_LAYER
         self.groups = game.all_sprites, game.mobs, game.boss
-        super().__init__(game, x, y)
+        super().__init__(game, x, y, 'robot_mob')
+        self.engage_radius = 600
+        self.last_shot = 0
+    
+    def pulse_shock(self):
+        now = pg.time.get_ticks()
+        if now - self.last_shot > 3000:  
+            player_pos = self.target.pos
+            mob_pos = self.pos
+            mob_to_player = player_pos - mob_pos
+            distance_to_player = mob_to_player.length()
+            #dir = vec(1, 0).rotate(-self.rot)
+            
+            if distance_to_player < self.engage_radius:
+                # Launch the poison ball towards the player
+                mob_to_player.normalize_ip()
+                mob_velocity = mob_to_player * ELECTRO_SHOCK_SPEED
+                # Create a new poison ball at the current position
+                new_electro_shock = ElectroShock(self.game, mob_pos, ELECTRO_SHOCK_DAMAGE)
+                
+                new_electro_shock.vel = mob_velocity
+                self.last_shot = now  # Update the last_shot time
+        
 
     def update(self):
         super().update()
+        self.pos += self.vel * self.game.dt
+        player_dist = self.target.pos - self.pos
+        if player_dist.length_squared() < self.engage_radius**2:
+           self.pulse_shock()
 
 class ElectroShock(pg.sprite.Sprite):
-    def __init__(self, game, pos, dir, damage):
+    def __init__(self, game, pos, damage):
         self._layer = BULLET_LAYER
-        self.groups = game.all_sprites, game.bullets
+        self.groups = game.all_sprites, game.mob_bullets
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.image = game.mob_weapon_images['electro_shock']
@@ -956,14 +1073,116 @@ class ElectroShock(pg.sprite.Sprite):
         self.hit_rect = self.rect
         self.pos = vec(pos)
         self.rect.center = pos
-        self.vel = dir * 500
-        self.spawn_time = pg.time.get_ticks()
+        self.rot = 0
         self.damage = damage
+        self.duration = 7000  # Duration of the poison ball in milliseconds
+        self.spawn_time = pg.time.get_ticks()  # Track the spawn time
+        self.engage_radius = 250  # Engage radius in pixels
+        self.wall = game.walls
+        self.target = game.player  # Set the target as the player
+        # Calculate initial direction and velocity towards the player's position at creation
+        direction = (self.target.pos - self.pos).normalize()  # Normalize to get direction
+        self.velocity = direction * ELECTRO_SHOCK_SPEED  # Maintain this velocity
+
+
 
     def update(self):
-        self.pos += self.vel * self.game.dt
+        # Move in the initial direction towards the player's position at creation
+        self.pos += self.velocity * self.game.dt
         self.rect.center = self.pos
+        #DotEffect(self.game, self.target, 5, 5000, 500)
         if pg.sprite.spritecollideany(self,self.game.walls):
             self.kill()
-        if pg.time.get_ticks() - self.spawn_time > MOB_WEAPONS['electro_shock']['bullet_lifetime']:
+        if pg.time.get_ticks() - self.spawn_time > self.duration:
             self.kill()
+
+
+class MantisMob(Mob):
+    def __init__(self, game, x, y):
+        super().__init__(game, x, y, 'mantis_mob')
+        self.camouflage_cooldown = 6000  # 12 seconds
+        self.last_camouflage_time = 0
+        self.is_camouflaged = True
+        self.camouflage_duration = 12000  # 3 seconds
+        self.last_strike_time = 0
+        self.strike_pause_duration = 1000  # 1 second
+        self.is_striking = False
+        self.target = game.player
+        self.strike_damage = 35
+
+    def camouflage(self):
+        current_time = pygame.time.get_ticks()
+        if current_time - self.last_camouflage_time > self.camouflage_cooldown:
+            self.is_camouflaged = True
+            self.last_camouflage_time = current_time
+            self.mob_type = 'camo_mantis'
+            #self.game.all_sprites.remove(self)
+            #self.game.mob_bullets.remove(self)
+
+        if self.is_camouflaged:
+            if current_time - self.last_camouflage_time > self.camouflage_duration:
+                self.is_camouflaged = False
+                self.mob_type = 'mantis_mob'
+                #self.game.all_sprites.add(self)
+                #self.game.mob_bullets.add(self)
+
+    def mantis_strike(self):
+        current_time = pygame.time.get_ticks()
+        if self.is_striking:
+            # If in lunging state, check if it's time to reset velocity
+            if current_time - self.last_strike_time > self.strike_pause_duration:
+                self.vel = vec(0, 0)  # Stop moving after lunge pause
+                self.is_striking = False  # Reset lunging state
+                self.pos += self.vel * self.game.dt
+                self.hit_rect.centerx = self.pos.x
+                collide_with_walls(self, self.game.walls, 'x')
+                self.hit_rect.centery = self.pos.y
+                collide_with_walls(self, self.game.walls, 'y')
+        else:
+            # Check if cooldown has elapsed and it's time to lunge.
+            if current_time - self.last_strike_time > self.strike_pause_duration:
+                player_pos = self.target.pos
+                mob_pos = self.pos
+                mob_to_player = player_pos - mob_pos
+                distance_to_player = mob_to_player.length()
+                if distance_to_player < 40:
+                    mob_to_player.normalize_ip()
+                    mob_velocity = mob_to_player * 400
+                    self.vel = mob_velocity
+                    self.last_lunge_time = current_time
+                    self.is_striking = True  # Enter lunging state
+                    self.avoid_walls()  # Avoid walls during lunge
+                    if pg.sprite.collide_rect(self, self.target):            
+                        self.game.player.health -= self.strike_damage
+
+    def update(self):
+        super().update()
+        self.camouflage()        
+        player_dist = self.target.pos - self.pos
+        if player_dist.length_squared() < self.engage_radius**2:
+            if random.random() < 0.002:
+                choice(self.game.zombie_moan_sounds).play()
+            self.rot = player_dist.angle_to(vec(1, 0))
+            if self.is_camouflaged:
+                self.image = pg.transform.rotate(self.game.mob_img['camo_mantis'], self.rot)
+            else:
+                self.image = pg.transform.rotate(self.game.mob_img['mantis_mob'], self.rot)            
+            self.rect = self.image.get_rect()
+            self.rect.center = self.pos
+            self.acc = vec(1, 0.01).rotate(-self.rot)
+            self.avoid_mobs()
+            self.acc.scale_to_length(self.speed)
+            self.acc += self.vel * -1
+            self.vel += self.acc * self.game.dt
+            self.pos += self.vel * self.game.dt + 0.5 * self.acc * self.game.dt ** 2
+            self.hit_rect.centerx = self.pos.x
+            collide_with_walls(self, self.game.walls, 'x')
+            self.hit_rect.centery = self.pos.y
+            collide_with_walls(self, self.game.walls, 'y')
+            self.rect.center = self.hit_rect.center
+        if self.health <= 0:
+            choice(self.game.zombie_hit_sounds).play()
+            self.game.map_img.blit(self.game.splat, self.pos - vec(32, 32))
+            self.kill()
+            self.game.score += 50
+    
