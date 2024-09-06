@@ -1100,10 +1100,10 @@ class ElectroShock(pg.sprite.Sprite):
 class MantisMob(Mob):
     def __init__(self, game, x, y):
         super().__init__(game, x, y, 'mantis_mob')
-        self.camouflage_cooldown = 6000  # 12 seconds
+        self.camouflage_cooldown = 6000  # 6 seconds
         self.last_camouflage_time = 0
         self.is_camouflaged = True
-        self.camouflage_duration = 12000  # 3 seconds
+        self.camouflage_duration = 12000  # 12 seconds
         self.last_strike_time = 0
         self.strike_pause_duration = 1000  # 1 second
         self.is_striking = False
@@ -1112,48 +1112,35 @@ class MantisMob(Mob):
 
     def camouflage(self):
         current_time = pygame.time.get_ticks()
-        if current_time - self.last_camouflage_time > self.camouflage_cooldown:
+        if current_time - self.last_camouflage_time > self.camouflage_cooldown and not self.is_camouflaged:
             self.is_camouflaged = True
             self.last_camouflage_time = current_time
-            self.mob_type = 'camo_mantis'
-            #self.game.all_sprites.remove(self)
-            #self.game.mob_bullets.remove(self)
 
         if self.is_camouflaged:
-            if current_time - self.last_camouflage_time > self.camouflage_duration:
+            if current_time > self.camouflage_duration:
                 self.is_camouflaged = False
-                self.mob_type = 'mantis_mob'
-                #self.game.all_sprites.add(self)
-                #self.game.mob_bullets.add(self)
-
+                self.last_camouflage_time = current_time
+               
     def mantis_strike(self):
         current_time = pygame.time.get_ticks()
-        if self.is_striking:
-            # If in lunging state, check if it's time to reset velocity
+        player_pos = self.target.pos
+        mob_pos = self.pos
+        mob_to_player = player_pos - mob_pos
+        distance_to_player = mob_to_player.length()
+
+        if distance_to_player < 40 and not self.is_striking:  # Within range and not already striking
+            mob_to_player.normalize_ip()
+            mob_velocity = mob_to_player * 400
+            self.vel = mob_velocity
+            self.is_striking = True  # Enter lunging state
+            self.avoid_walls()  # Avoid walls during lunge
+            if pg.sprite.collide_rect(self, self.target):            
+                self.game.player.health -= self.strike_damage
+        elif self.is_striking:  # If already striking, check if it's time to reset velocity
             if current_time - self.last_strike_time > self.strike_pause_duration:
                 self.vel = vec(0, 0)  # Stop moving after lunge pause
                 self.is_striking = False  # Reset lunging state
-                self.pos += self.vel * self.game.dt
-                self.hit_rect.centerx = self.pos.x
-                collide_with_walls(self, self.game.walls, 'x')
-                self.hit_rect.centery = self.pos.y
-                collide_with_walls(self, self.game.walls, 'y')
-        else:
-            # Check if cooldown has elapsed and it's time to lunge.
-            if current_time - self.last_strike_time > self.strike_pause_duration:
-                player_pos = self.target.pos
-                mob_pos = self.pos
-                mob_to_player = player_pos - mob_pos
-                distance_to_player = mob_to_player.length()
-                if distance_to_player < 40:
-                    mob_to_player.normalize_ip()
-                    mob_velocity = mob_to_player * 400
-                    self.vel = mob_velocity
-                    self.last_lunge_time = current_time
-                    self.is_striking = True  # Enter lunging state
-                    self.avoid_walls()  # Avoid walls during lunge
-                    if pg.sprite.collide_rect(self, self.target):            
-                        self.game.player.health -= self.strike_damage
+                self.last_strike_time = current_time  # Reset strike cooldown
 
     def update(self):
         super().update()
@@ -1180,6 +1167,8 @@ class MantisMob(Mob):
             self.hit_rect.centery = self.pos.y
             collide_with_walls(self, self.game.walls, 'y')
             self.rect.center = self.hit_rect.center
+        if player_dist.length_squared() < 40:
+            self.mantis_strike()
         if self.health <= 0:
             choice(self.game.zombie_hit_sounds).play()
             self.game.map_img.blit(self.game.splat, self.pos - vec(32, 32))
