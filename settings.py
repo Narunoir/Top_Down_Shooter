@@ -36,11 +36,22 @@ GRIDHEIGHT = HEIGHT / TILESIZE
 
 WALL_IMG = 'tile_304.png'
 
+# Talent Colors
+BG_COLOR = (30, 30, 30)
+BOX_COLOR = (255, 100, 50)
+HIGHLIGHT_COLOR = (255, 215, 0)
+TALENT_BG_COLOR = (10, 10, 60)  # Deep blue for contrast
+TEXT_COLOR = (255, 255, 255)
+
+
+
+
 
 
  ## Player Settings
-PLAYER_SPEED     = 10
+PLAYER_SPEED     = 300
 PLAYER_ROT_SPEED = .5
+ROTATE_DEADZONE  = 5
 
 PLAYER_IMG = {}
 PLAYER_IMG['pistol']  = 'manBlue_gun.png'
@@ -123,6 +134,8 @@ SCORPION_MOB_IMG = '2d_scorpion.png'
 ROBOT_MOB_IMG = 'robot_mob.png'
 MANTIS_MOB_IMG = 'mantis_1.png'
 MANTIS_MOB_CAMOUFLAGED_IMG = 'mantis_camo.png'
+ZOMBIE_DOG_MOB_IMG = 'zombie_dog.png'
+ZOMBIE_BEAR_IMG = 'zombie_dog.png'  # Placeholder brown square
 
 
  ## Mob settings
@@ -131,6 +144,7 @@ MOB_HIT_RECT  = pg.Rect(0, 0, 30, 30)
 MOB_HEALTH    = 100
 MOB_DAMAGE    = 2
 MOB_KNOCKBACK = 20
+MOB_EXP       = 2  # Experience gained per mob kill
 AVOID_RADIUS  = 50
 ENGAGE_RADIUS = 750
 DISENGAGE_RADIUS = 2000
@@ -183,78 +197,170 @@ MOB_WEAPONS['electro_shock'] = {'bullet_speed': 500,
 
 ### Map Floors ###
 LEVEL = {}
-LEVEL[1] = 'floor1.tmx'
-LEVEL[2] = 'floor2.tmx'
-LEVEL[3] = 'floor3.tmx'
-LEVEL[4] = 'floor4.tmx'
-LEVEL[5] = 'floor5.tmx'
-#LEVEL[6] = 'floor1.tmx'
-#LEVEL[7] = 'floor2.tmx'
-#LEVEL[8] = 'floor3.tmx'
-#LEVEL[9] = 'floor4.tmx'
-#LEVEL[10] = 'floor5.tmx'
+LEVEL[1] = 'floor1.tmx'      # Suburban Neighborhood - 15-20 zombies
+LEVEL[2] = 'floor2.tmx'      # City Streets - 20-25 mixed mobs
+LEVEL[3] = 'floor3.tmx'      # Industrial Zone - 25-30 robots
+LEVEL[4] = 'floor4.tmx'      # Airport Terminal - 20-25 robots + zombies
+LEVEL[5] = 'floor5.tmx'      # Highway/Bus Depot - 25-30 zombies
+LEVEL[6] = 'floor6.tmx'      # Sewers - 30-35 scorpions + zombies
+LEVEL[7] = 'floor7.tmx'      # Mountain Pass - 30-35 zombie dogs + mantis
+LEVEL[8] = 'floor8.tmx'      # Frozen Wasteland - 35-40 wolves + zombies
+LEVEL[9] = 'floor9.tmx'      # Graveyard - 40-45 zombies + ghosts
+LEVEL[10] = 'floor10.tmx'    # Toxic Waste Facility - 40-45 mutants
+LEVEL[11] = 'floor11.tmx'    # Underground Lab - 45-50 cyber spiders + robots
+LEVEL[12] = 'floor12.tmx'    # Volcano Cavern - 45-50 fire creatures
+LEVEL[13] = 'floor13.tmx'    # Arctic Research Station - 50-55 ice golems
+LEVEL[14] = 'floor14.tmx'    # Shadow Realm - 50-55 shadow creatures
+LEVEL[15] = 'floor15.tmx'    # Mutant Stronghold - 55-60 brutes + mutants
+LEVEL[16] = 'floor16.tmx'    # Plague Hospital - 55-60 infected + plague doctors
+LEVEL[17] = 'floor17.tmx'    # Military Base - 60-65 mechs + robots
+LEVEL[18] = 'floor18.tmx'    # Gothic Castle - 60-65 vampires + bats
+LEVEL[19] = 'floor19.tmx'    # Dragon's Lair - 65-70 dragonlings + minions
+LEVEL[20] = 'floor20.tmx'    # Final Citadel - 70-80 all enemy types
 
 ### Boss Images and Settings  ###
+BOSS_EXP = 20  # Default experience gained per boss kill
+
 BOSS = {}
 BOSS[1] = {'boss_image':'zoimbie1_hold.png',
             'boss_speed':100,
             'boss_health':8000,
             'boss_damage': 40,
-            'boss_hit_rect': pg.Rect(0, 0, 50, 50)
+            'boss_hit_rect': pg.Rect(0, 0, 50, 50),
+            'boss_exp': 20
             }
 BOSS[2] = {'boss_image':'scorpion.png',
             'boss_speed':300,
             'boss_health':5600,
             'boss_damage': 50,
-            'boss_hit_rect': pg.Rect(0, 0, 130, 150)
+            'boss_hit_rect': pg.Rect(0, 0, 130, 150),
+            'boss_exp': 20
             }
 BOSS[3] = {'boss_image':'Robot_Boss_1.png',
             'boss_speed':100,
             'boss_health':10000,
             'boss_damage': 45,
-            'boss_hit_rect': pg.Rect(0, 0, 50, 50)
+            'boss_hit_rect': pg.Rect(0, 0, 50, 50),
+            'boss_exp': 20
             }
 BOSS[4] = {'boss_image':'Airport_Bot.png',
             'boss_speed':100,
             'boss_health':5000,
             'boss_damage': 45,
-            'boss_hit_rect': pg.Rect(0, 0, 50, 50)
+            'boss_hit_rect': pg.Rect(0, 0, 50, 50),
+            'boss_exp': 20
             }
 BOSS[5] = {'boss_image':'Bus_Driver.png',
             'boss_speed':100,
             'boss_health':5000,
             'boss_damage': 40,
-            'boss_hit_rect': pg.Rect(0, 0, 50, 50)
+            'boss_hit_rect': pg.Rect(0, 0, 50, 50),
+            'boss_exp': 20
             }
 BOSS[6] = {'boss_image':'scorpion.png',
             'boss_speed':100,
             'boss_health':500,
             'boss_damage': 40,
-            'boss_hit_rect': pg.Rect(0, 0, 50, 50)
+            'boss_hit_rect': pg.Rect(0, 0, 50, 50),
+            'boss_exp': 20
             }
 BOSS[7] = {'boss_image':'scorpion.png',
             'boss_speed':100,
             'boss_health':500,
             'boss_damage': 40,
-            'boss_hit_rect': pg.Rect(0, 0, 50, 50)
+            'boss_hit_rect': pg.Rect(0, 0, 50, 50),
+            'boss_exp': 20
             }
-BOSS[8] = {'boss_image':'scorpion.png',
-            'boss_speed':100,
-            'boss_health':500,
-            'boss_damage': 40,
-            'boss_hit_rect': pg.Rect(0, 0, 50, 50)
+BOSS[8] = {'boss_image':'zombie_dog.png',  # Direwolf Alpha
+            'boss_speed':200,
+            'boss_health':12000,
+            'boss_damage': 60,
+            'boss_hit_rect': pg.Rect(0, 0, 80, 80),
+            'boss_exp': 20
             }
-BOSS[9] = {'boss_image':'scorpion.png',
-            'boss_speed':100,
-            'boss_health':500,
-            'boss_damage': 40,
-            'boss_hit_rect': pg.Rect(0, 0, 50, 50)
+BOSS[9] = {'boss_image':'zoimbie1_hold.png',  # Necromancer
+            'boss_speed':80,
+            'boss_health':15000,
+            'boss_damage': 50,
+            'boss_hit_rect': pg.Rect(0, 0, 60, 60),
+            'boss_exp': 20
             }
-BOSS[10] = {'boss_image':'scorpion.png',
+BOSS[10] = {'boss_image':'zoimbie1_hold.png',  # Toxic Abomination
+            'boss_speed':90,
+            'boss_health':18000,
+            'boss_damage': 55,
+            'boss_hit_rect': pg.Rect(0, 0, 70, 70),
+            'boss_exp': 20
+            }
+BOSS[11] = {'boss_image':'scorpion.png',  # Cyber Spider Queen
+            'boss_speed':120,
+            'boss_health':20000,
+            'boss_damage': 65,
+            'boss_hit_rect': pg.Rect(0, 0, 100, 100),
+            'boss_exp': 20
+            }
+BOSS[12] = {'boss_image':'zoimbie1_hold.png',  # Fire Elemental Lord
+            'boss_speed':110,
+            'boss_health':22000,
+            'boss_damage': 70,
+            'boss_hit_rect': pg.Rect(0, 0, 80, 80),
+            'boss_exp': 20
+            }
+BOSS[13] = {'boss_image':'robot_mob.png',  # Ice Golem Titan
+            'boss_speed':70,
+            'boss_health':25000,
+            'boss_damage': 75,
+            'boss_hit_rect': pg.Rect(0, 0, 90, 90),
+            'boss_exp': 20
+            }
+BOSS[14] = {'boss_image':'mantis_1.png',  # Shadow Assassin Lord
+            'boss_speed':180,
+            'boss_health':20000,
+            'boss_damage': 90,
+            'boss_hit_rect': pg.Rect(0, 0, 70, 70),
+            'boss_exp': 20
+            }
+BOSS[15] = {'boss_image':'zoimbie1_hold.png',  # Mutant Brute King
             'boss_speed':100,
-            'boss_health':500,
-            'boss_damage': 40,
-            'boss_hit_rect': pg.Rect(0, 0, 50, 50)
+            'boss_health':30000,
+            'boss_damage': 85,
+            'boss_hit_rect': pg.Rect(0, 0, 100, 100),
+            'boss_exp': 20
+            }
+BOSS[16] = {'boss_image':'zoimbie1_hold.png',  # Plague Doctor Prime
+            'boss_speed':90,
+            'boss_health':28000,
+            'boss_damage': 60,
+            'boss_hit_rect': pg.Rect(0, 0, 70, 70),
+            'boss_exp': 20
+            }
+BOSS[17] = {'boss_image':'Robot_Boss_1.png',  # Mech Titan
+            'boss_speed':80,
+            'boss_health':35000,
+            'boss_damage': 100,
+            'boss_hit_rect': pg.Rect(0, 0, 120, 120),
+            'boss_exp': 20
+            }
+BOSS[18] = {'boss_image':'zoimbie1_hold.png',  # Vampire Lord
+            'boss_speed':150,
+            'boss_health':32000,
+            'boss_damage': 80,
+            'boss_hit_rect': pg.Rect(0, 0, 80, 80),
+            'boss_exp': 20
+            }
+BOSS[19] = {'boss_image':'scorpion.png',  # Ancient Dragon
+            'boss_speed':130,
+            'boss_health':40000,
+            'boss_damage': 120,
+            'boss_hit_rect': pg.Rect(0, 0, 150, 150),
+            'boss_exp': 20
+            }
+BOSS[20] = {'boss_image':'Robot_Boss_1.png',  # Apocalypse Overlord
+            'boss_speed':120,
+            'boss_health':50000,
+            'boss_damage': 100,
+            'boss_hit_rect': pg.Rect(0, 0, 150, 150),
+            'boss_exp': 20
             }
 THROW_RANGE = 1500
 THROW_SPEED = 750

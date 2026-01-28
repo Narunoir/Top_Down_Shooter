@@ -1,11 +1,14 @@
 import pygame as pg, pygame
 import sys
 from os import path
+import pickle
+from random import choice
 from settings import *
 from sprites import*
 from tilemap import *
-from story import *               
-import os
+from story import *
+from talents import *
+from tilemap import TalentBox, Button               
 
 
 ## HUD Functions ##
@@ -57,8 +60,8 @@ class Game:
         pg.key.set_repeat(50, 10)
         self.clock = pygame.time.Clock()
         self.load_data()
-        
-        
+        self.talent_boxes = None  # Start with no boxes
+
 
 
     def load_data(self):
@@ -78,6 +81,10 @@ class Game:
         self.current_level = 1
         self.fighting_boss = False
         self.score = 0
+        self.exp = 0
+        self.kill_count = 0
+        self.killed_mobs = set()  # Track killed mobs by (level, x, y)
+        self.exited_via_menu = False
         self.go_fast_timer = 0
         self.camera_x = 0
         self.camera_y = 0
@@ -98,6 +105,8 @@ class Game:
         self.mob_img['robot_mob'] = pg.transform.rotate(pg.transform.flip(pg.transform.scale(pg.image.load(path.join(mob_folder, ROBOT_MOB_IMG)).convert_alpha(), (80, 80)), True, False), -90)
         self.mob_img['mantis_mob'] = pg.transform.rotate(pg.transform.scale(pg.image.load(path.join(mob_folder, MANTIS_MOB_IMG)).convert_alpha(), (100, 100)), 90)
         self.mob_img['camo_mantis'] = pg.transform.rotate(pg.transform.scale(pg.image.load(path.join(mob_folder, MANTIS_MOB_CAMOUFLAGED_IMG)).convert_alpha(), (20, 20)), 90)
+        self.mob_img['zombie_dog_mob'] = pg.transform.rotate(pg.transform.flip(pg.transform.scale(pg.image.load(path.join(mob_folder, ZOMBIE_DOG_MOB_IMG)).convert_alpha(), (128, 128)), True, False), -90)
+        self.mob_img['zombie_bear'] = pg.transform.scale(pg.image.load(path.join(mob_folder, ZOMBIE_BEAR_IMG)).convert_alpha(), (100, 100))  # Placeholder brown square
         self.wall_img = pg.image.load(path.join(wall_folder, WALL_IMG)).convert_alpha()
         self.wall_img = pg.transform.scale(self.wall_img, (TILESIZE, TILESIZE))
 
@@ -149,6 +158,10 @@ class Game:
         self.item_images = {}
         for item in ITEM_IMAGES:
             self.item_images[item] = pg.image.load(path.join(img_folder, ITEM_IMAGES[item])).convert_alpha()
+
+        # Load start screen background
+        self.start_screen_bg = pg.image.load(path.join(img_folder, 'start_screen_BG.png')).convert()
+        self.start_screen_bg = pg.transform.scale(self.start_screen_bg, (WIDTH, HEIGHT))
         ### Sound loading
         pg.mixer.music.load(path.join(music_folder, BG_MUSIC))
         self.effects_sounds = {}
@@ -178,8 +191,13 @@ class Game:
             zhs.set_volume(.15)
             self.zombie_hit_sounds.append(zhs)
 
+    def is_final_level(self):
+        """Check if the current level is the final level."""
+        return self.current_level >= 20
+
     def next_level(self):
-        if self.current_level <=4:
+        self.save_game()
+        if not self.is_final_level():
             self.next_lvl_screen()
             self.current_level += 1
             self.new()
@@ -188,7 +206,55 @@ class Game:
             self.current_level = 1
             self.score = 0
             self.show_start_screen()
-            self.new()
+
+    def save_game(self):
+        # Save comprehensive game state
+        save_data = {
+            'level': self.current_level,
+            'score': self.score,
+            'exp': self.exp,
+            'player_pos': (self.player.pos.x, self.player.pos.y) if hasattr(self, 'player') else None,
+            'talents': PLAYER_TALENTS.copy(),
+            'kill_count': getattr(self, 'kill_count', 0),
+            'killed_mobs': list(self.killed_mobs),  # Save killed mob positions
+            # Player stats
+            'player_health': self.player.health if hasattr(self, 'player') else PLAYER_HEALTH,
+            'player_weapon': self.player.weapon if hasattr(self, 'player') else 'pistol',
+            'grenade_count': self.player.grenade_count if hasattr(self, 'player') else 0,
+            # Weapons owned
+            'has_weapons': self.player.has_weapons.copy() if hasattr(self, 'player') else {
+                'pistol': True, 'shotgun': False, 'flamethrower': False, 'bazooka': False, 'grenade': False
+            }
+        }
+        with open('savegame.pkl', 'wb') as f:
+            pickle.dump(save_data, f)
+
+    def load_game(self):
+        try:
+            with open('savegame.pkl', 'rb') as f:
+                save_data = pickle.load(f)
+            self.current_level = save_data['level']
+            self.score = save_data['score']
+            self.exp = save_data['exp']
+            self.saved_player_pos = save_data['player_pos']
+
+            # Update PLAYER_TALENTS in place to preserve reference to talents.py module
+            PLAYER_TALENTS.clear()
+            PLAYER_TALENTS.update(save_data['talents'])
+
+            self.kill_count = save_data.get('kill_count', 0)
+            self.killed_mobs = set(save_data.get('killed_mobs', []))  # Load killed mob positions
+
+            # Store player stats to restore after new() creates the player
+            self.saved_player_health = save_data.get('player_health', PLAYER_HEALTH)
+            self.saved_player_weapon = save_data.get('player_weapon', 'pistol')
+            self.saved_grenade_count = save_data.get('grenade_count', 0)
+            self.saved_has_weapons = save_data.get('has_weapons', {
+                'pistol': True, 'shotgun': False, 'flamethrower': False, 'bazooka': False, 'grenade': False
+            })
+            return True
+        except FileNotFoundError:
+            return False
 
     def new(self):
         # starts a new game
@@ -210,21 +276,37 @@ class Game:
         for tile_object in self.map.tmxdata.objects:
             obj_center = vec(tile_object.x + tile_object.width // 2,
                             tile_object.y + tile_object.height // 2)
+
+            # Create unique mob ID from level and position
+            mob_id = (self.current_level, int(obj_center.x), int(obj_center.y))
+
             if tile_object.name == 'player':
                 self.player = Player(self, obj_center.x, obj_center.y)
             if tile_object.name == 'zombie':
-                ZombieMob(self, obj_center.x, obj_center.y)
+                if mob_id not in self.killed_mobs:
+                    mob = ZombieMob(self, obj_center.x, obj_center.y)
+                    mob.spawn_id = mob_id  # Store spawn ID for tracking
             if tile_object.name == 'wall':
                 Obstacle(self, tile_object.x, tile_object.y,
                         tile_object.width, tile_object.height)
             if tile_object.name in ['health_pack', 'shotgun', 'flamethrower', 'bazooka', 'grenade']:
                 Item(self, obj_center, tile_object.name)
             if tile_object.name == 'scorpion':
-                ScorpionMob(self, obj_center.x, obj_center.y)
+                if mob_id not in self.killed_mobs:
+                    mob = ScorpionMob(self, obj_center.x, obj_center.y)
+                    mob.spawn_id = mob_id
             if tile_object.name == 'robot':
-                RobotMob(self, obj_center.x, obj_center.y)
+                if mob_id not in self.killed_mobs:
+                    mob = RobotMob(self, obj_center.x, obj_center.y)
+                    mob.spawn_id = mob_id
             if tile_object.name == 'mantis':
-                MantisMob(self, obj_center.x, obj_center.y)
+                if mob_id not in self.killed_mobs:
+                    mob = MantisMob(self, obj_center.x, obj_center.y)
+                    mob.spawn_id = mob_id
+            if tile_object.name == 'zombie_dog':
+                if mob_id not in self.killed_mobs:
+                    mob = ZombieDogMob(self, obj_center.x, obj_center.y)
+                    mob.spawn_id = mob_id
 
         self.camera = Camera(self.map.width, self.map.height)
         self.draw_debug = False
@@ -242,7 +324,7 @@ class Game:
             self.events()
             if not self.paused:
                 self.update()
-            self.draw()
+                self.draw()
 
     def quit(self):
         pg.quit()
@@ -268,7 +350,10 @@ class Game:
                 obj_center = vec(tile_object.x + tile_object.width / 2,
                                 tile_object.y + tile_object.height / 2)
                 if tile_object.name == 'boss':
-                    LEVEL_BOSS[self.current_level](self, obj_center.x, obj_center.y)
+                    boss_id = (self.current_level, int(obj_center.x), int(obj_center.y))
+                    if boss_id not in self.killed_mobs:
+                        boss = LEVEL_BOSS[self.current_level](self, obj_center.x, obj_center.y)
+                        boss.spawn_id = boss_id
 
         ######  Go Fast Timer   #########
         now = pg.time.get_ticks()
@@ -276,107 +361,114 @@ class Game:
             self.go_fast_timer = now
             self.score -= 10
             
-
-
-        ## Player item pick up ##
-            
         hits = pg.sprite.spritecollide(self.player, self.items, False, collide_hit_rect)
+    
+        ##Player Item Pickup ##
+        def apply_item(item):
+            item_effects = {
+                'health_pack': lambda: self.player.add_health(HEALTH_PACK_AMOUNT) if self.player.health < PLAYER_HEALTH else None,
+                'shotgun': lambda: equip_weapon('shotgun', self.player_img_shotgun),
+                'flamethrower': lambda: equip_weapon('flamethrower', self.player_img_flamethrower),
+                'bazooka': lambda: equip_weapon('bazooka', self.player_img_bazooka),
+                'grenade': lambda: setattr(self.player, 'grenade_count', self.player.grenade_count + 1),}
+
+            if item.type in item_effects:
+                item.kill()
+                sound_key = 'health_up' if item.type == 'health_pack' else 'gun_pickup'
+                self.effects_sounds[sound_key].play()
+                item_effects[item.type]()  # run the effect
+
+        def equip_weapon(name, img):
+            self.player.weapon = name
+            self.player_img = img
+            setattr(self.player, f'has_{name}', True)
+
         for hit in hits:
-            if hit.type == 'health_pack' and self.player.health < PLAYER_HEALTH:
-                hit.kill()
-                self.effects_sounds['health_up'].play()
-                self.player.add_health(HEALTH_PACK_AMOUNT)
-            if hit.type == 'shotgun':
-                hit.kill()
-                self.effects_sounds['gun_pickup'].play()
-                self.player.weapon = 'shotgun'
-                self.player_img = self.player_img_shotgun
-                self.player.has_shotgun = True
-            if hit.type == 'flamethrower':
-                hit.kill()
-                self.effects_sounds['gun_pickup'].play()
-                self.player.weapon = 'flamethrower'
-                self.player_img = self.player_img_flamethrower
-                self.player.has_flamethrower = True
-            if hit.type == 'bazooka':
-                hit.kill()
-                self.effects_sounds['gun_pickup'].play()
-                self.player.weapon = 'bazooka'
-                self.player_img = self.player_img_bazooka
-                self.player.has_bazooka = True
-            if hit.type == 'grenade':
-                hit.kill()
-                self.effects_sounds['gun_pickup'].play()
-                self.player.grenade_count += 1
+            apply_item(hit)
                 
-        ## Mobs Hit Player  ##
-        hits = pg.sprite.spritecollide(self.player, self.mobs, False, collide_hit_rect)
-        for hit in hits:
+            # Mobs hit player
+        def on_mob_hit_player(mob):
             if random.random() < 0.7:
                 choice(self.player_hit_sounds).play()
             self.player.health -= MOB_DAMAGE
-            hit.vel = vec(0, 0)
+            mob.vel = vec(0, 0)
             if self.player.health <= 0:
                 self.playing = False
-            #if self.score >=50:
-                
-                #self.score -= 50
+
+        hits = pg.sprite.spritecollide(self.player, self.mobs, False, collide_hit_rect)
+        for hit in hits:
+            on_mob_hit_player(hit)
         if hits:
             self.player.got_hit()
             self.player.pos += vec(MOB_KNOCKBACK, 0).rotate(-hits[0].rot)
-        
-        ##### Boss hits player  ####
-        hits = pg.sprite.spritecollide(self.player, self.boss, False, collide_hit_rect)
-        for hit in hits:
+
+            # Boss hits player
+        def on_boss_hit_player(boss):
             self.player.health -= BOSS[self.current_level]['boss_damage']
-        ## Bullets hit Mobs  ##
-        hits = pg.sprite.groupcollide(self.mobs, self.bullets, False, False)
-        for mob in hits:
-            for bullet in hits[mob]:
-                mob.health -= bullet.damage
-                # Check if the bullet is a Rocket
-                if isinstance(bullet, Flame):
-                    # Create an explosion at the mob's position
-                    explosion_size = bullet.explosion_size 
-                    Explosion(self, mob.pos, explosion_size, .25)
-                    # Apply DoT effect to the mob
-                    dot_effect = DotEffect(self, mob, 1.25, 30000, .5)  # Create a DotEffect instance
-                    mob.apply_dot(dot_effect)
-                    bullet.kill()
-                elif isinstance(bullet, Rocket):
-                    mob.vel = vec(0,0)
-                    explosion_size = bullet.explosion_size      
-                    Explosion(self, mob.pos, explosion_size, 50)
-                    bullet.kill()
-                elif isinstance(bullet, Grenade):
-                    explosion_size = bullet.explosion_size                    
-                elif isinstance(bullet, Bullet):
-                    mob.vel = vec(0,0)
-                    bullet.kill()
-        ### Mob_Bullet hits Player ###
-        m_hits = pg.sprite.spritecollide(self.player, self.mob_bullets, False, collide_hit_rect)
-        for m_hit in m_hits:
-            if isinstance(m_hit, PoisonBall):
-                dot_effect = DotEffect(self, self.player, 1.25, 3000, .5)  # Create a DotEffect instance
-                self.player.apply_dot(dot_effect)
-                m_hit.kill()
-            if isinstance(m_hit, PoisonPuddle):
-                if self.player.health > 0:
-                    self.player.health -= POISON_PUDDLE_DAMAGE
-                self.player.health -= POISON_PUDDLE_DAMAGE
-            if isinstance(m_hit, ElectroShock):
+
+        boss_hits = pg.sprite.spritecollide(self.player, self.boss, False, collide_hit_rect)
+        for hit in boss_hits:
+            on_boss_hit_player(hit)
+
+            # Bullets hit mobs
+        def handle_bullet_hit(mob, bullet):
+            mob.health -= bullet.damage
+            if isinstance(bullet, Flame):
+                Explosion(self, mob.pos, bullet.explosion_size, 0.25)
+                # Use talent-modified DoT stats from the Flame bullet
+                dot = DotEffect(self, mob, bullet.dot_damage, bullet.dot_duration, 0.5)
+                mob.apply_dot(dot)
+                bullet.kill()
+            elif isinstance(bullet, Rocket):
+                mob.vel = vec(0, 0)
+                Explosion(self, mob.pos, bullet.explosion_size, 50)
+                bullet.kill()
+            elif isinstance(bullet, Grenade):
+                Explosion(self, mob.pos, bullet.explosion_size, 50)
+                bullet.kill()
+            elif isinstance(bullet, Bullet):
+                mob.vel = vec(0, 0)
+                bullet.kill()
+
+        bullet_hits = pg.sprite.groupcollide(self.mobs, self.bullets, False, False)
+        for mob, bullets in bullet_hits.items():
+            for bullet in bullets:
+                handle_bullet_hit(mob, bullet)
+
+            # Mob bullets hit player
+        def handle_mob_bullet_hit(bullet):
+            apply_knockback = True
+            if isinstance(bullet, PoisonBall):
+                dot = DotEffect(self, self.player, 1.25, 3000, 0.5)
+                self.player.apply_dot(dot)
+                bullet.kill()
+            elif isinstance(bullet, PoisonPuddle):
+                self.player.health -= POISON_PUDDLE_DAMAGE * 2
+                apply_knockback = False
+            elif isinstance(bullet, ElectroShock):
                 self.player.health -= ELECTRO_SHOCK_DAMAGE
                 self.player.is_stunned = True
-                m_hit.kill()
+                bullet.kill()
+            return apply_knockback
+
+        m_hits = pg.sprite.spritecollide(self.player, self.mob_bullets, False, collide_hit_rect)
+        for m_hit in m_hits:
+            apply_knockback = handle_mob_bullet_hit(m_hit)
+            if apply_knockback:
+                rot_angle = getattr(m_hit, 'rot', 0)
+                self.player.pos += vec(MOB_BULLET_KNOCKBACK, 0).rotate(-rot_angle)
         if m_hits:
             self.player.got_hit()
-            self.player.pos += vec(MOB_BULLET_KNOCKBACK, 0).rotate(-m_hits[0].rot)
-
 
     def events(self):
         # events that need to be stored like actions and movement
+        keys = pg.key.get_pressed()   # Get the state of all keyboard buttons
+
+        # Dev shortcuts - check continuously, not just on key events
+        if keys[pg.K_p] and keys[pg.K_o] and keys[pg.K_i] and keys[pg.K_LSHIFT]:
+            self.next_level()
+
         for event in pygame.event.get():
-            keys = pg.key.get_pressed()   # Get the state of all keyboard buttons
             # closeing Windows
             if event.type == pygame.QUIT:
                 if self.playing:
@@ -384,25 +476,43 @@ class Game:
                 self.running = False
             if event.type == pg.KEYUP:
                 if event.key == pg.K_ESCAPE:
-                    self.quit()
-                if event.key == pg.K_h:
-                    self.draw_debug = not self.draw_debug
-                if event.key == pg.K_p:
                     self.paused = not self.paused
-                if keys[pg.K_p] and [pg.K_o] and [pg.K_i] and [pg.K_LSHIFT]:
-                    self.next_level()
-                if event.key == pg.K_0:
+                    if self.paused:
+                        menu_choice = self.show_pause_menu()
+                        # Reset clock to prevent dt accumulation
+                        self.clock.tick()
+                        if menu_choice == 'save':
+                            self.save_game()
+                            self.paused = False
+                        elif menu_choice == 'exit':
+                            self.exited_via_menu = True
+                            self.playing = False
+                            self.running = False
+                        elif menu_choice == 'continue':
+                            self.paused = False
+                elif event.key == pg.K_h:
+                    self.draw_debug = not self.draw_debug
+                elif event.key == pg.K_0:
                     # Then, you can iterate over the mapping and call each cutscene
                     self.cutscene(STORY_SCRIPT[0], self.img_folder, self.cutscene_images[0])
-                if event.key == pg.K_9:
+                elif event.key == pg.K_9:
                     self.fighting_boss = True
                     for tile_object in self.map.tmxdata.objects:
                         obj_center = vec(tile_object.x + tile_object.width / 2,
                                         tile_object.y + tile_object.height / 2)
                         if tile_object.name == 'boss':
-                            LEVEL_BOSS[self.current_level](self, obj_center.x, obj_center.y)
+                            boss_id = (self.current_level, int(obj_center.x), int(obj_center.y))
+                            if boss_id not in self.killed_mobs:
+                                boss = LEVEL_BOSS[self.current_level](self, obj_center.x, obj_center.y)
+                                boss.spawn_id = boss_id
+                elif event.key == pygame.K_n:
+                    self.paused = not self.paused
+                    if self.paused:
+                        self.show_talent_tree()
+                        # Reset clock to prevent dt accumulation
+                        self.clock.tick()
+
                         
-                
     def draw_text(self, text, font_name, size, color, x, y, align="nw"):
         font = pg.font.Font(font_name, size)
         text_surface = font.render(text, True, color)
@@ -561,9 +671,11 @@ class Game:
                 draw_boss_health(self.screen, 10, 40, boss_instance.health / BOSS[self.current_level]['boss_health'])
             except:
                 draw_boss_health(self.screen, 10, 40, 0)
-        ##Zombie counter ##
+        ##HUD Counters ##
+        self.draw_text('Score: {}'.format(self.score),self.font_name, 30, WHITE, WIDTH / 5, 15, 'center')
+        self.draw_text('Level: {}'.format(self.current_level),self.font_name, 30, WHITE, WIDTH / 2.85, 15, 'center')
         self.draw_text('Zombies: {}'.format(len(self.mobs)),self.font_name, 30, WHITE, WIDTH / 2, 15, 'center')
-        self.draw_text('Score: {}'.format(self.score),self.font_name, 30, WHITE, WIDTH / 4, 15, 'center')
+        self.draw_text('Exp: {}'.format(self.exp),self.font_name, 30, WHITE, WIDTH / 1.5, 15, 'center')
         if self.paused:
             self.screen.blit(self.dim_screen, (0, 0))
             self.draw_text("Paused", self.title_font, 205, RED, WIDTH / 2, HEIGHT / 2, 'center')
@@ -590,27 +702,255 @@ class Game:
 
 
     def show_start_screen(self):
-        # opens a start screen
-        # opens a game over screen
-        self.screen.fill(BLACK)
-        self.draw_text('ZOMBIES ATE MY BLOCKS', self.title_font, 100, RED, WIDTH / 2, HEIGHT / 2 - 300, align='center')
-        self.draw_text('Press The Enter Key to Begin',self.title_font, 75, WHITE, WIDTH / 2, HEIGHT /2 - 200, align='center')
-        self.draw_text('Move with your left mouse button, or the W key',self.title_font, 50, WHITE, WIDTH / 2, HEIGHT /2 + 240, align='center')
-        self.draw_text('Switch weapons with keys 1, 2, 3, 4',self.title_font, 50, WHITE, WIDTH / 2, HEIGHT /2 + 340, align='center')
-        pg.display.flip()
-        self.wait_for_key()
+        # Opens a start screen with clickable buttons
+        button_width = 400
+        button_height = 70
+        button_spacing = 90
+        start_y = HEIGHT / 2 - 50
+
+        # Use None for font_name to use default system font instead of title_font
+        new_game_btn = Button(WIDTH / 2 - button_width / 2, start_y, button_width, button_height, 'New Game', None, 45)
+
+        # Only show continue button if save file exists
+        has_save = path.exists('savegame.pkl')
+        if has_save:
+            continue_btn = Button(WIDTH / 2 - button_width / 2, start_y + button_spacing, button_width, button_height, 'Continue', None, 45)
+            quit_btn = Button(WIDTH / 2 - button_width / 2, start_y + button_spacing * 2, button_width, button_height, 'Close Game', None, 45)
+            buttons = [new_game_btn, continue_btn, quit_btn]
+        else:
+            quit_btn = Button(WIDTH / 2 - button_width / 2, start_y + button_spacing, button_width, button_height, 'Close Game', None, 45)
+            buttons = [new_game_btn, quit_btn]
+
+        running = True
+        clock = pygame.time.Clock()
+
+        while running:
+            mouse_pos = pg.mouse.get_pos()
+
+            # Draw background image
+            self.screen.blit(self.start_screen_bg, (0, 0))
+
+            # Draw title
+            self.draw_text('ZOMBIES ATE MY BLOCKS', self.title_font, 125, RED, WIDTH / 2, HEIGHT / 2 - 300, align='center')
+
+            # Draw control hints at bottom
+            self.draw_text('Move with your left mouse button, or the W key', self.title_font, 30, WHITE, WIDTH / 2, HEIGHT - 150, align='center')
+            self.draw_text('Switch weapons with keys 1, 2, 3, 4', self.title_font, 30, WHITE, WIDTH / 2, HEIGHT - 100, align='center')
+
+            # Draw buttons
+            for button in buttons:
+                button.draw(self.screen)
+
+            pg.display.flip()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.quit()
+                elif event.type == pygame.KEYUP:
+                    if event.key == pygame.K_n:
+                        return 'new'
+                    elif event.key == pygame.K_c and has_save:
+                        return 'continue'
+                    elif event.key == pygame.K_q:
+                        self.quit()
+
+                # Check button clicks
+                if new_game_btn.handle_event(event, mouse_pos):
+                    return 'new'
+                elif has_save and continue_btn.handle_event(event, mouse_pos):
+                    return 'continue'
+                elif quit_btn.handle_event(event, mouse_pos):
+                    self.quit()
+
+            clock.tick(60)
+
+        return 'new'
+
+    def show_pause_menu(self):
+        # Create buttons
+        button_width = 300
+        button_height = 60
+        button_spacing = 80
+        start_y = HEIGHT / 2 - 150
+
+        resume_btn = Button(WIDTH / 2 - button_width / 2, start_y, button_width, button_height, 'Resume', self.title_font, 50)
+        controls_btn = Button(WIDTH / 2 - button_width / 2, start_y + button_spacing, button_width, button_height, 'Controls', self.title_font, 50)
+        save_btn = Button(WIDTH / 2 - button_width / 2, start_y + button_spacing * 2, button_width, button_height, 'Save', self.title_font, 50)
+        quit_btn = Button(WIDTH / 2 - button_width / 2, start_y + button_spacing * 3, button_width, button_height, 'Quit', self.title_font, 50)
+
+        buttons = [resume_btn, controls_btn, save_btn, quit_btn]
+
+        running = True
+        clock = pygame.time.Clock()
+
+        while running:
+            mouse_pos = pg.mouse.get_pos()
+            self.screen.fill(BLACK)
+
+            # Draw title
+            self.draw_text('PAUSED', self.title_font, 100, RED, WIDTH / 2, HEIGHT / 2 - 300, align='center')
+
+            # Draw buttons
+            for button in buttons:
+                button.draw(self.screen)
+
+            pg.display.flip()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return 'exit'
+                elif event.type == pygame.KEYUP:
+                    if event.key == pygame.K_ESCAPE:
+                        return 'continue'
+
+                # Check button clicks
+                if resume_btn.handle_event(event, mouse_pos):
+                    return 'continue'
+                elif controls_btn.handle_event(event, mouse_pos):
+                    self.show_controls_screen()
+                    # Clear event queue after returning from controls
+                    pg.event.clear()
+                elif save_btn.handle_event(event, mouse_pos):
+                    return 'save'
+                elif quit_btn.handle_event(event, mouse_pos):
+                    if self.show_quit_confirmation():
+                        return 'exit'
+
+            clock.tick(60)
+
+        # Clear event queue before returning
+        pg.event.clear()
+        return 'continue'
+
+    def wait_for_start_key(self):
+        waiting = True
+        while waiting:
+            self.clock.tick(FPS)
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    self.quit()
+                if event.type == pg.KEYUP:
+                    if event.key == pg.K_n:
+                        return 'new'
+                    elif event.key == pg.K_c and path.exists('savegame.pkl'):
+                        return 'continue'
+
+    def wait_for_key(self):
+        pg.event.wait()
+        waiting = True
+        while waiting:
+            keys = pg.key.get_pressed()
+            pg.event.clear()
+            self.clock.tick(FPS)
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    waiting = False
+                    self.quit()
+                if event.type == pg.KEYUP and keys[pg.K_RETURN]:
+                    waiting = False
     
     
-    '''def next_lvl_screen(self):
-        # opens a Next Level screen
-        self.screen.fill(BLACK)
-        self.draw_text('Next Level, Get Ready', self.title_font, 100, RED, WIDTH / 2, HEIGHT / 2, align='center')
-        self.draw_text('Score {}'.format(self.score), self.title_font, 100, WHITE, WIDTH / 3, HEIGHT / 4, align='center')
-        self.draw_text('Press The Enter Key To Start',self.title_font, 75, WHITE,
-                        WIDTH / 2, HEIGHT /2 + 140, align='center')
-        pg.display.flip()
-        self.wait_for_key()'''
-    
+    def show_talent_tree(self):
+        running = True
+        clock = pygame.time.Clock()
+
+        # Weapon names and their talent IDs (5 weapons x 8 talents = 40 total)
+        weapon_names = ['Pistol', 'Shotgun', 'Flamethrower', 'Bazooka', 'Grenade']
+        weapon_keys = ['pistol', 'shotgun', 'flamethrower', 'bazooka', 'grenade']
+
+        # Create talent node info from TALENT_NODES
+        from talents import TALENT_NODES, PLAYER_TALENTS, get_talent_cost
+
+        # Define layout constants (needed for both creation and drawing)
+        box_size = 70
+        padding_x = 150  # Increased to make room for weapon labels
+        padding_y = 120  # Increased top margin
+        spacing_x = 140  # Increased horizontal spacing between boxes
+        spacing_y = 130  # Increased vertical spacing to prevent overlap
+
+        # Recreate boxes with updated layout
+        self.talent_boxes = []
+
+        # Create 5 rows (weapons) x 8 columns (talents per weapon)
+        for row in range(5):  # 5 weapons
+            weapon_key = weapon_keys[row]
+            for col in range(8):  # 8 talents per weapon
+                talent_id = f"{weapon_key}_{col + 1}"
+                x = padding_x + col * spacing_x
+                y = padding_y + row * spacing_y
+
+                # Get talent info
+                talent_node = TALENT_NODES.get(talent_id, {})
+                label = talent_node.get('name', f'T{col + 1}')
+                max_rank = talent_node.get('max_rank', 5)
+
+                box = TalentBox(x, y, box_size, label)
+                box.talent_id = talent_id  # Store talent ID for later reference
+                box.max_rank = max_rank  # Store max rank
+                box.level = PLAYER_TALENTS.get(talent_id, 0)  # Load current rank
+                self.talent_boxes.append(box)
+
+        while running:
+            self.screen.fill(TALENT_BG_COLOR)
+
+            # Draw title
+            self.draw_text('TALENT TREE', self.title_font, 80, YELLOW, WIDTH / 2, 30, align='center')
+
+            # Draw exp counter
+            exp_text = f'Available EXP: {self.exp}'
+            self.draw_text(exp_text, self.font_name, 36, WHITE, WIDTH / 2, HEIGHT - 60, align='center')
+
+            # Draw weapon labels
+            for row in range(5):
+                weapon_name = weapon_names[row]
+                y = padding_y + row * spacing_y
+                # Center weapon label vertically with the talent boxes
+                self.draw_text(weapon_name, self.font_name, 30, YELLOW, 20, y + 30, align='w')
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.KEYUP:
+                    if event.key in [pygame.K_ESCAPE, pygame.K_n]:
+                        running = False
+                        # Keep game paused when exiting talent tree
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    for box in self.talent_boxes:
+                        # Check if click is on this box
+                        if box.rect.collidepoint(event.pos):
+                            # Try to upgrade talent
+                            current_rank = PLAYER_TALENTS.get(box.talent_id, 0)
+                            if current_rank < box.max_rank:
+                                cost = get_talent_cost(current_rank)
+                                if self.exp >= cost:
+                                    # Upgrade the talent
+                                    PLAYER_TALENTS[box.talent_id] = current_rank + 1
+                                    box.level = current_rank + 1
+                                    self.exp -= cost
+
+            for box in self.talent_boxes:
+                box.draw(self.screen)
+
+                # Draw cost above the box
+                current_rank = PLAYER_TALENTS.get(box.talent_id, 0)
+                if current_rank < box.max_rank:
+                    cost = get_talent_cost(current_rank)
+                    cost_text = f'Cost: {cost}'
+                    cost_color = GREEN if self.exp >= cost else RED
+                    self.draw_text(cost_text, self.font_name, 18, cost_color,
+                                 box.rect.centerx, box.rect.top - 35, align='center')
+                else:
+                    self.draw_text('MAX', self.font_name, 18, GREEN,
+                                 box.rect.centerx, box.rect.top - 35, align='center')
+
+            pygame.display.flip()
+            clock.tick(60)
+
+        # Clear event queue to prevent accumulated input
+        pg.event.clear()
+
+
     def next_lvl_screen(self):
         # opens a Next Level screen
         self.screen.fill(BLACK)
@@ -695,38 +1035,214 @@ class Game:
 
 
     def end_game_screen(self):
-        # opens a Next Level screen
+        # Victory screen after beating the final level
         self.screen.fill(BLACK)
-        self.draw_text('You Beat The Game, GREAT JOB!!!', self.title_font, 100, RED, WIDTH / 2, HEIGHT / 2, align='center')
-        self.draw_text('Score {}'.format(self.score), self.title_font, 250, WHITE, WIDTH / 3, HEIGHT / 4, align='center')
-        self.draw_text('Press The Enter Key To Start',self.title_font, 75, WHITE,
-                        WIDTH / 2, HEIGHT /2 + 140, align='center')
+
+        # Title
+        self.draw_text('CONGRATULATIONS!', self.title_font, 80, YELLOW, WIDTH / 2, HEIGHT / 2 - 200, align='center')
+        self.draw_text('You Beat The Game!', self.title_font, 60, RED, WIDTH / 2, HEIGHT / 2 - 120, align='center')
+
+        # Stats
+        self.draw_text(f'Final Score: {self.score}', self.title_font, 50, WHITE, WIDTH / 2, HEIGHT / 2 - 20, align='center')
+        self.draw_text(f'Total Kills: {self.kill_count}', self.title_font, 40, WHITE, WIDTH / 2, HEIGHT / 2 + 30, align='center')
+        self.draw_text(f'Levels Completed: {self.current_level}', self.title_font, 40, WHITE, WIDTH / 2, HEIGHT / 2 + 80, align='center')
+
+        # Prompt
+        self.draw_text('Press Enter to Return to Menu', self.title_font, 45, GREEN, WIDTH / 2, HEIGHT / 2 + 180, align='center')
+
         pg.display.flip()
         self.wait_for_key()
 
 
-    def wait_for_key(self):
-        pg.event.wait()
+    def show_controls_screen(self):
+        """Display a screen showing all game controls."""
+        running = True
+        clock = pygame.time.Clock()
+
+        # Create back button in upper left corner with 50px padding
+        back_btn = Button(50, 50, 300, 60, 'Back', self.title_font, 50)
+
+        controls = [
+            ("MOVEMENT", ""),
+            ("Move Forward", "Left Mouse / W"),
+            ("Move Backward", "S / Down Arrow"),
+            ("", ""),
+            ("COMBAT", ""),
+            ("Shoot", "Spacebar / Right Mouse"),
+            ("Throw Grenade", "E / Middle Mouse Button"),
+            ("", ""),
+            ("WEAPONS", ""),
+            ("Pistol", "1"),
+            ("Shotgun", "2"),
+            ("Flamethrower", "3"),
+            ("Bazooka", "4"),
+            ("", ""),
+            ("MENU", ""),
+            ("Pause Menu", "ESC"),
+            ("Talent Tree", "N"),
+            ("Debug Mode", "H"),
+        ]
+
+        while running:
+            mouse_pos = pg.mouse.get_pos()
+            self.screen.fill(BLACK)
+
+            # Draw title
+            self.draw_text('CONTROLS', self.title_font, 80, YELLOW, WIDTH / 2, 50, align='center')
+
+            # Draw controls list
+            y_offset = 150
+            for action, key in controls:
+                if action == "":
+                    y_offset += 20  # Add spacing
+                    continue
+
+                # Section headers (bold/larger)
+                if key == "":
+                    self.draw_text(action, self.font_name, 36, YELLOW, WIDTH / 2, y_offset, align='center')
+                    y_offset += 50
+                else:
+                    # Regular controls
+                    self.draw_text(action, self.font_name, 28, WHITE, WIDTH / 2 - 300, y_offset, align='w')
+                    self.draw_text(key, self.font_name, 28, GREEN, WIDTH / 2 + 300, y_offset, align='e')
+                    y_offset += 40
+
+            # Draw back button
+            back_btn.draw(self.screen)
+
+            pg.display.flip()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYUP:
+                    if event.key == pygame.K_ESCAPE:
+                        running = False
+
+                # Check button click
+                if back_btn.handle_event(event, mouse_pos):
+                    running = False
+
+            clock.tick(60)
+
+        # Clear event queue to prevent accumulated input
+        pg.event.clear()
+
+    def show_quit_confirmation(self):
+        """Show confirmation dialog before quitting. Returns True if user confirms quit."""
+        button_width = 200
+        button_height = 60
+        button_spacing = 50
+
+        yes_btn = Button(WIDTH / 2 - button_width - button_spacing / 2, HEIGHT / 2 + 50,
+                        button_width, button_height, 'Yes', self.title_font, 50)
+        no_btn = Button(WIDTH / 2 + button_spacing / 2, HEIGHT / 2 + 50,
+                       button_width, button_height, 'No', self.title_font, 50)
+
+        running = True
+        clock = pygame.time.Clock()
+
+        while running:
+            mouse_pos = pg.mouse.get_pos()
+
+            # Draw semi-transparent overlay
+            overlay = pg.Surface((WIDTH, HEIGHT))
+            overlay.set_alpha(200)
+            overlay.fill(BLACK)
+            self.screen.blit(overlay, (0, 0))
+
+            # Draw confirmation text
+            self.draw_text('Are you sure you want to quit?', self.title_font, 60, RED,
+                         WIDTH / 2, HEIGHT / 2 - 50, align='center')
+            self.draw_text('(Game will be auto-saved)', self.font_name, 30, WHITE,
+                         WIDTH / 2, HEIGHT / 2, align='center')
+
+            # Draw buttons
+            yes_btn.draw(self.screen)
+            no_btn.draw(self.screen)
+
+            pg.display.flip()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return True
+                elif event.type == pygame.KEYUP:
+                    if event.key == pygame.K_ESCAPE:
+                        return False
+
+                # Check button clicks
+                if yes_btn.handle_event(event, mouse_pos):
+                    # Auto-save before quitting
+                    self.save_game()
+                    return True
+                elif no_btn.handle_event(event, mouse_pos):
+                    return False
+
+            clock.tick(60)
+
+        # Clear event queue before returning
+        pg.event.clear()
+        return False
+
+    def wait_for_pause_key(self):
+        """Legacy method - kept for compatibility."""
         waiting = True
         while waiting:
-            keys = pg.key.get_pressed()
-            pg.event.clear()
             self.clock.tick(FPS)
             for event in pg.event.get():
                 if event.type == pg.QUIT:
-                    waiting = False
-                    self.quit()
-                if event.type == pg.KEYUP and keys[pg.K_RETURN]:
-                    waiting = False
+                    return 'exit'
+                if event.type == pg.KEYUP:
+                    if event.key == pg.K_s:
+                        return 'save'
+                    elif event.key == pg.K_e:
+                        return 'exit'
+                    elif event.key == pg.K_c:
+                        return 'continue'
 
 
 
-g = Game()
+if __name__ == '__main__':
+    g = Game()
 
-g.show_start_screen()
-while g.running:
-    g.new()
-    g.run()
-    g.show_game_over_screen()
+    menu_choice = g.show_start_screen()
+    while g.running:
+        g.exited_via_menu = False
+        if menu_choice == 'continue':
+            if g.load_game():
+                g.new()
+                # Restore player position
+                if hasattr(g, 'saved_player_pos') and g.saved_player_pos:
+                    g.player.pos = vec(g.saved_player_pos)
+                    del g.saved_player_pos
 
-pygame.quit()
+                # Restore player health
+                if hasattr(g, 'saved_player_health'):
+                    g.player.health = g.saved_player_health
+                    del g.saved_player_health
+
+                # Restore weapon and grenade count
+                if hasattr(g, 'saved_player_weapon'):
+                    g.player.weapon = g.saved_player_weapon
+                    g.player_img = g.player.weapon_images.get(g.saved_player_weapon, g.player_img_gun)
+                    del g.saved_player_weapon
+
+                if hasattr(g, 'saved_grenade_count'):
+                    g.player.grenade_count = g.saved_grenade_count
+                    del g.saved_grenade_count
+
+                # Restore weapons owned
+                if hasattr(g, 'saved_has_weapons'):
+                    g.player.has_weapons = g.saved_has_weapons
+                    del g.saved_has_weapons
+            else:
+                menu_choice = 'new'
+                g.new()
+        else:
+            g.new()
+        g.run()
+        if not g.exited_via_menu:
+            g.show_game_over_screen()
+            menu_choice = g.show_start_screen()
+        else:
+            break
